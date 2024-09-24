@@ -480,6 +480,7 @@ var optab = []Optab{
 	{AMOVD, C_GOTADDR, C_NONE, C_NONE, C_ZREG, C_NONE, 71, 8, 0, 0, 0},
 	{AMOVD, C_TLS_LE, C_NONE, C_NONE, C_ZREG, C_NONE, 69, 4, 0, 0, 0},
 	{AMOVD, C_TLS_IE, C_NONE, C_NONE, C_ZREG, C_NONE, 70, 8, 0, 0, 0},
+	{AMOVD, C_TLS_GD, C_NONE, C_NONE, C_ZREG, C_NONE, 108, 12, 0, 0, 0}, // NOTE: 此处为12, 而sym在Addrel声明size<=8可以跳过链接时buf内容的长度检查
 
 	{AFMOVS, C_FREG, C_NONE, C_NONE, C_ADDR, C_NONE, 64, 12, 0, 0, 0},
 	{AFMOVS, C_ADDR, C_NONE, C_NONE, C_FREG, C_NONE, 65, 12, 0, 0, 0},
@@ -2089,6 +2090,9 @@ func (c *ctxt7) aclass(a *obj.Addr) int {
 			if a.Sym != nil { // use relocation
 				if a.Sym.Type == objabi.STLSBSS {
 					if c.ctxt.Flag_shared {
+						if c.ctxt.Flag_tlsmodelgd {
+							return C_TLS_GD
+						}
 						return C_TLS_IE
 					} else {
 						return C_TLS_LE
@@ -4675,6 +4679,28 @@ func (c *ctxt7) asmout(p *obj.Prog, out []uint32) (count int) {
 			Siz:  8,
 			Sym:  p.From.Sym,
 		})
+		if p.From.Offset != 0 {
+			c.ctxt.Diag("invalid offset on MOVW $tlsvar")
+		}
+
+	case 108: /* ldr GD model movd $tlsvar, reg -> adrp REGTMP, 0; ldr reg, [REGTMP, #0] + relocs; add reg, reg, #0 + relocs */
+		o1 = ADR(1, 0, REG_R0)
+		o2 = c.olsr12u(p, c.opldr(p, AMOVD), 0, REG_R0, p.To.Reg)
+		o3 = uint32((0x244 << 22) | uint32(0)<<10 | uint32(REG_R0&31)<<5 | uint32(REG_R0&31))
+
+		rel := obj.Addrel(c.cursym)
+		rel.Off = int32(c.pc)
+		rel.Siz = 8 //
+		rel.Sym = p.From.Sym
+		rel.Add = 0
+		rel.Type = objabi.R_ARM64_TLS_GD
+
+		rel2 := obj.Addrel(c.cursym)
+		rel2.Off = int32(c.pc + 8)
+		rel2.Siz = 4
+		rel2.Sym = p.From.Sym
+		rel2.Add = 0
+		rel2.Type = objabi.R_ARM64_TLS_GD_PAGEOFF12
 		if p.From.Offset != 0 {
 			c.ctxt.Diag("invalid offset on MOVW $tlsvar")
 		}

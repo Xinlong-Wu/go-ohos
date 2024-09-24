@@ -64,10 +64,41 @@ func argv_index(argv **byte, i int32) *byte {
 	return *(**byte)(add(unsafe.Pointer(argv), uintptr(i)*goarch.PtrSize))
 }
 
+func argsValid() bool {
+	valid := true
+	if islibrary || isarchive {
+		if _cgo_sys_lib_args_valid != nil {
+			ret := asmcgocall(_cgo_sys_lib_args_valid, nil)
+			valid = (ret == 1)
+		}
+	}
+	return valid
+}
+
 func args(c int32, v **byte) {
-	argc = c
-	argv = v
-	sysargs(c, v)
+	// Not all dynamic linkers pass the main program's argc / argv to the init
+	// functions used by c-archive / c-shared builds. In these cases, the argc
+	// and argv passed to this function will be garbage, and a valid but empty
+	// set of arguments is allocated.
+	if argsValid() {
+		argc = c
+		argv = v
+	} else {
+		args := unsafe.Pointer(persistentalloc(goarch.PtrSize*4, 0, &memstats.other_sys))
+
+		// argv pointer
+		*(**byte)(args) = (*byte)(add(args, goarch.PtrSize*1))
+
+		// argv data
+		*(**byte)(add(args, goarch.PtrSize*1)) = (*byte)(nil) // end argv
+		*(**byte)(add(args, goarch.PtrSize*2)) = (*byte)(nil) // end envp
+		*(**byte)(add(args, goarch.PtrSize*3)) = (*byte)(nil) // end auxv
+
+		argc = 0
+		argv = (**byte)(args)
+	}
+
+	sysargs(argc, argv)
 }
 
 func goargs() {

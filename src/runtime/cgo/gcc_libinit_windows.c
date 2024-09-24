@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "libcgo.h"
 #include "libcgo_windows.h"
@@ -54,6 +55,11 @@ _cgo_maybe_run_preinit() {
 				 }
 			}
 	 }
+}
+
+int
+x_cgo_sys_lib_args_valid() {
+	return 1;
 }
 
 void

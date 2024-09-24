@@ -464,6 +464,9 @@ const (
 	// The GOT slot for a symbol in -dynlink mode.
 	C_GOTADDR
 
+	// TLS "var" in general dynamic mode
+	C_TLS_GD
+
 	// TLS "var" in local exec mode: will become a constant offset from
 	// thread local base that is ultimately chosen by the program linker.
 	C_TLS_LE
