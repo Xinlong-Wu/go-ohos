@@ -1204,6 +1204,7 @@ nosecret:
 
 	// Switch to system stack.
 	MOVD	R0, R9	// gosave_systemstack_switch<> and save_g might clobber R0
+  MOVD	R1, R10	// gosave_systemstack_switch<> and save_g might clobber R1  // 作者可能比较了解该调用，否则仅仅对R0作了保存，一般函数会内部作保存与恢复
 	BL	gosave_systemstack_switch<>(SB)
 	MOVD	R3, g
 	BL	runtime·save_g(SB)
@@ -1211,6 +1212,7 @@ nosecret:
 	MOVD	R0, RSP
 	MOVD	(g_sched+gobuf_bp)(g), R29
 	MOVD	R9, R0
+  MOVD	R10, R1
 
 	// Now on a scheduling stack (a pthread-created stack).
 	// Save room for two of our pointers /*, plus 32 bytes of callee

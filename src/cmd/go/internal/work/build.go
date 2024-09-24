@@ -150,6 +150,8 @@ and test commands:
 	-linkshared
 		build code that will be linked against shared libraries previously
 		created with -buildmode=shared.
+	-tlsmodegd
+		arm64 ganeral dynamic mode.
 	-mod mode
 		module download mode to use: readonly, vendor, or mod.
 		By default, if a vendor directory is present and the go version in go.mod
@@ -352,6 +354,7 @@ func AddBuildFlags(cmd *base.Command, mask BuildFlagMask) {
 	cmd.Flag.Var((*base.StringsFlag)(&cfg.BuildToolexec), "toolexec", "")
 	cmd.Flag.BoolVar(&cfg.BuildTrimpath, "trimpath", false, "")
 	cmd.Flag.BoolVar(&cfg.BuildWork, "work", false, "")
+	cmd.Flag.BoolVar(&cfg.BuildTlsmodegd, "tlsmodegd", false, "")
 
 	// Undocumented, unstable debugging flags.
 	cmd.Flag.StringVar(&cfg.DebugActiongraph, "debug-actiongraph", "", "")

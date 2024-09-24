@@ -561,6 +561,18 @@ func elfreloc1(ctxt *ld.Link, out *ld.OutBuf, ldr *loader.Loader, s loader.Sym, 
 		out.Write64(uint64(r.Xadd))
 		out.Write64(uint64(sectoff + 4))
 		out.Write64(uint64(elf.R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC) | uint64(elfsym)<<32)
+		/// NOTE: 上边会自动生成R_AARCH64_TLS_TPREL64或者R_AARCH64_TLSDESC的标识，取决于ADR_PAGE类型，哪里控制的指令立即数值调整的映射，尚未清楚。猜测大约是通过调用外部的lld拿到了对应的类型(llvm项目的lld\ELF\Arch\AArch64.cpp的方法getRelExpr有映射关系)。
+	case objabi.R_ARM64_TLS_GD:
+		// 符号重定向类型：R_AARCH64_TLSDESC  __tls_get_addr是libc开放接口，但此处可经过TLSDESC方式，获取tls ld的偏移信息。此处是通过desc获得汇编函数地址(函数返回偏移量)
+		out.Write64(uint64(elf.R_AARCH64_TLSDESC_ADR_PAGE21) | uint64(elfsym)<<32) // 标识desc重定位
+		out.Write64(uint64(r.Xadd))
+		out.Write64(uint64(sectoff + 4))
+		out.Write64(uint64(elf.R_AARCH64_TLSDESC_LD64_LO12_NC) | uint64(elfsym)<<32)
+	case objabi.R_ARM64_TLS_GD_PAGEOFF12:
+		if siz != 4 {
+			return false
+		}
+		out.Write64(uint64(elf.R_AARCH64_TLSDESC_ADD_LO12_NC) | uint64(elfsym)<<32)
 	case objabi.R_ARM64_GOTPCREL:
 		out.Write64(uint64(elf.R_AARCH64_ADR_GOT_PAGE) | uint64(elfsym)<<32)
 		out.Write64(uint64(r.Xadd))
@@ -870,6 +882,12 @@ func archreloc(target *ld.Target, ldr *loader.Loader, syms *ld.ArchSyms, r loade
 		case objabi.R_ARM64_TLS_IE:
 			nExtReloc = 2 // need two ELF relocations. see elfreloc1
 			return val, nExtReloc, isOk
+		case objabi.R_ARM64_TLS_GD_PAGEOFF12:
+			nExtReloc = 1 // 只要一处重定位，需要与elfreloc1里边声明的重定位个数一致
+			return val, nExtReloc, isOk
+		case objabi.R_ARM64_TLS_GD:
+			nExtReloc = 2 // need two ELF relocations. see elfreloc1. 不可使用该外部extreloc
+			return val, nExtReloc, isOk
 
 		case objabi.R_ADDR:
 			if target.IsWindows() && r.Add() != 0 {
@@ -945,6 +963,7 @@ func archreloc(target *ld.Target, ldr *loader.Loader, syms *ld.ArchSyms, r loade
 		}
 		return val | (v << 5), noExtReloc, true
 
+	case objabi.R_ARM64_TLS_GD: // TDOO: pie & elf  -> le mode
 	case objabi.R_ARM64_TLS_IE:
 		if target.IsPIE() && target.IsElf() {
 			// We are linking the final executable, so we
@@ -1131,6 +1150,8 @@ func extreloc(target *ld.Target, ldr *loader.Loader, r loader.Reloc, s loader.Sy
 		return rr, true
 	case objabi.R_CALLARM64,
 		objabi.R_ARM64_TLS_LE,
+		objabi.R_ARM64_TLS_GD,
+		objabi.R_ARM64_TLS_GD_PAGEOFF12,
 		objabi.R_ARM64_TLS_IE:
 		return ld.ExtrelocSimple(ldr, r), true
 	}

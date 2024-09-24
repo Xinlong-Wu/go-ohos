@@ -127,6 +127,9 @@ const (
 
 	// Arm64.
 
+	// TLS General Dynamic
+	R_ARM64_TLS_GD
+	R_ARM64_TLS_GD_PAGEOFF12
 	// Set a MOV[NZ] immediate field to bits [15:0] of the offset from the thread
 	// local base to the thread local variable defined by the referenced (thread
 	// local) symbol. Error if the offset does not fit into 16 bits.

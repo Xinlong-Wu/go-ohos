@@ -811,6 +811,9 @@ are:
 		Combine all the listed non-main packages into a single shared
 		library that will be used when building with the -linkshared
 		option. Packages named main are ignored.
+		
+	-tlsmodegd
+		thread local storage with general dynamic mode only support ARM64.
 
 	-buildmode=exe
 		Build the listed main packages and everything they import into

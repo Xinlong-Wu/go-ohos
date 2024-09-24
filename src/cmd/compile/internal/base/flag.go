@@ -127,6 +127,7 @@ type CmdFlags struct {
 	WB                 bool         "help:\"enable write barrier\"" // TODO: remove
 	PgoProfile         string       "help:\"read profile or pre-process profile from `file`\""
 	ErrorURL           bool         "help:\"print explanatory URL with error message if applicable\""
+	Tlsmodegd          *bool        "help:\"generate code that thread local storage with general dynamic mode. currently only support Arm64\"" // &Ctxt.Tlsmodegd, set below
 
 	// Configuration derived from flags; not a flag itself.
 	Cfg struct {
@@ -175,6 +176,7 @@ func ParseFlags() {
 	Flag.LinkShared = &Ctxt.Flag_linkshared
 	Flag.Shared = &Ctxt.Flag_shared
 	Flag.WB = true
+	Flag.Tlsmodegd = &Ctxt.Flag_tlsmodelgd
 
 	Debug.ConcurrentOk = true
 	Debug.CompressInstructions = 1
