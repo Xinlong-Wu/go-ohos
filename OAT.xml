@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <oatconfig>
+        <filefilterlist>
+            <filefilter desc="Filters for compatibility,license header policies" name="copyrightPolicyFilter">
+                <filteritem desc="版权文件，不添加版权头" name="LICENSE" type="filename"/>
+                <filteritem desc="NOTICE文件，不添加版权头" name="NOTICE" type="filename"/>
+                <filteritem desc="门禁构建脚本，不添加版权头" name="build/.*" type="filepath"/>
+            </filefilter>
+            <filefilter desc="Filters for compatibility,license header policies" name="defaultPolicyFilter">
+                <filteritem desc="版权文件，不添加版权头" name="LICENSE" type="filename"/>
+                <filteritem desc="NOTICE文件，不添加版权头" name="NOTICE" type="filename"/>
+                <filteritem desc="门禁构建脚本，不添加版权头" name="build/.*" type="filepath"/>
+            </filefilter>
+        </filefilterlist>
+    </oatconfig>
+</configuration>

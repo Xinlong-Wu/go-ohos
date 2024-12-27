@@ -1,0 +1,11 @@
+[
+  {
+    "Name": "golang/go",
+    "License": "BSD-3-Clause license",
+    "License File": "LICENSE",
+    "Version Number": "1.22.10",
+    "Owner": "machangwang@huawei.com",
+    "Upstream URL": "https://github.com/golang/go",
+    "Description": "The Go programming language"
+  }
+]
