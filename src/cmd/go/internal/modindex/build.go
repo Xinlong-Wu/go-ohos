@@ -693,6 +693,9 @@ func (ctxt *Context) matchTag(name string, allTags map[string]bool) bool {
 	if ctxt.GOOS == "ios" && name == "darwin" {
 		return true
 	}
+	if ctxt.GOOS == "openharmony" && name == "linux" {
+		return true
+	}
 	if name == "unix" && syslist.UnixOS[ctxt.GOOS] {
 		return true
 	}

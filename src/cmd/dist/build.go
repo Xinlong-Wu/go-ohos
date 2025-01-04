@@ -99,6 +99,7 @@ var okgoos = []string{
 	"freebsd",
 	"nacl", // keep;
 	"netbsd",
+	"openharmony",
 	"openbsd",
 	"plan9",
 	"windows",
@@ -324,6 +325,7 @@ var clangos = []string{
 	"darwin", "ios", // macOS 10.9 and later require clang
 	"freebsd", // FreeBSD 10 and later do not ship gcc
 	"openbsd", // OpenBSD ships with GCC 4.2, which is now quite old.
+	"openharmony", // openharmony default CC is clang.
 }
 
 // compilerEnvLookup returns the compiler settings for goos/goarch in map m.
@@ -1063,18 +1065,19 @@ func packagefile(pkg string) string {
 // unixOS is the set of GOOS values matched by the "unix" build tag.
 // This is the same list as in internal/syslist/syslist.go.
 var unixOS = map[string]bool{
-	"aix":       true,
-	"android":   true,
-	"darwin":    true,
-	"dragonfly": true,
-	"freebsd":   true,
-	"hurd":      true,
-	"illumos":   true,
-	"ios":       true,
-	"linux":     true,
-	"netbsd":    true,
-	"openbsd":   true,
-	"solaris":   true,
+	"aix":         true,
+	"android":     true,
+	"darwin":      true,
+	"dragonfly":   true,
+	"freebsd":     true,
+	"hurd":        true,
+	"illumos":     true,
+	"ios":         true,
+	"linux":       true,
+	"openharmony": true,
+	"netbsd":      true,
+	"openbsd":     true,
+	"solaris":     true,
 }
 
 // matchtag reports whether the tag matches this build.
@@ -1083,7 +1086,7 @@ func matchtag(tag string) bool {
 	case "gc", "cmd_go_bootstrap", "go1.1":
 		return true
 	case "linux":
-		return goos == "linux" || goos == "android"
+		return goos == "linux" || goos == "android" || goos == "openharmony"
 	case "solaris":
 		return goos == "solaris" || goos == "illumos"
 	case "darwin":
@@ -1815,6 +1818,7 @@ var cgoEnabled = map[string]bool{
 	"windows/386":     true,
 	"windows/amd64":   true,
 	"windows/arm64":   true,
+	"openharmony/arm64": true,
 }
 
 // List of platforms that are marked as broken ports.
@@ -1837,6 +1841,7 @@ var firstClass = map[string]bool{
 	"linux/arm64":   true,
 	"windows/386":   true,
 	"windows/amd64": true,
+	"openharmony/arm64": true,
 }
 
 // We only need CC if cgo is forced on, or if the platform requires external linking.

@@ -29,6 +29,10 @@ func TestShared(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if GOOS == "openharmony" {
+		t.Skip("openharmony system use musllibc, runtime: c-shared builds fail with musllibc - go.dev/issue/13492")
+	}
+
 	GOARCH, err := goEnv("GOARCH")
 	if err != nil {
 		t.Fatal(err)

@@ -347,7 +347,7 @@ func TestReadMetricsConsistency(t *testing.T) {
 		}
 	}
 	// Only check this on Linux where we can be reasonably sure we have a high-resolution timer.
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" || runtime.GOOS == "openharmony" {
 		if cpu.gcDedicated <= 0 && cpu.gcAssist <= 0 && cpu.gcIdle <= 0 {
 			t.Errorf("found no time spent on GC work: %#v", cpu)
 		}

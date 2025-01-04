@@ -425,7 +425,7 @@ func TestPageAllocScavenge(t *testing.T) {
 	}
 	// Disable these tests on iOS since we have a small address space.
 	// See #46860.
-	if PageAlloc64Bit != 0 && goos.IsIos == 0 {
+	if PageAlloc64Bit != 0 && goos.IsIos == 0 && goos.IsOpenharmony == 0 {
 		tests["ScavAllVeryDiscontiguous"] = setup{
 			beforeAlloc: map[ChunkIdx][]BitRange{
 				BaseChunkIdx:          {},

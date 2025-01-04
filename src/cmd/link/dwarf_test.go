@@ -69,6 +69,10 @@ func testDWARF(t *testing.T, buildmode string, expectDWARF bool, env ...string) 
 			}
 
 			if buildmode == "c-archive" {
+				argExtar := "ar"
+				if extar := os.Getenv("AR"); extar != "" {
+					argExtar = extar
+				}
 				// Extract the archive and use the go.o object within.
 				ar := os.Getenv("AR")
 				if ar == "" {

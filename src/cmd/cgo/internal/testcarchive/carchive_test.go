@@ -33,7 +33,11 @@ import (
 	"unicode"
 )
 
-var globalSkip = func(t testing.TB) {}
+var globalSkip = func(t testing.TB) {
+	if GOOS == "openharmony" {
+		t.Skip("openharmony system use musllibc, runtime: c-archive builds fail with musllibc - go.dev/issue/13492")
+	}
+}
 
 // Program to run.
 var bin []string

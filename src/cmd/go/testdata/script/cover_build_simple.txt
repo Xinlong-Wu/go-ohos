@@ -1,3 +1,4 @@
+[GOOS:openharmony] skip '-race mode not supported in openharmony'
 # This test checks basic "go build -cover" functionality.
 
 [short] skip

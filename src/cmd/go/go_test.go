@@ -362,7 +362,7 @@ func TestMain(m *testing.M) {
 }
 
 func isAlpineLinux() bool {
-	if runtime.GOOS != "linux" {
+	if runtime.GOOS != "linux" && runtime.GOOS != "openharmony" {
 		return false
 	}
 	fi, err := os.Lstat("/etc/alpine-release")
@@ -2000,7 +2000,7 @@ func testBuildmodePIE(t *testing.T, useCgo, setBuildmodeToPIE bool) {
 	tg.run(args...)
 
 	switch runtime.GOOS {
-	case "linux", "android", "freebsd":
+	case "linux", "android", "freebsd", "openharmony":
 		f, err := elf.Open(obj)
 		if err != nil {
 			t.Fatal(err)

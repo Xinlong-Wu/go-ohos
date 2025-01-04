@@ -122,6 +122,8 @@ func printOSDetails(w io.Writer) {
 	case "darwin", "ios":
 		printCmdOut(w, "uname -v: ", "uname", "-v")
 		printCmdOut(w, "", "sw_vers")
+	case "openharmony":
+		printCmdOut(w, "uname -sr: ", "uname", "-sr")
 	case "linux":
 		printCmdOut(w, "uname -sr: ", "uname", "-sr")
 		printCmdOut(w, "", "lsb_release", "-a")

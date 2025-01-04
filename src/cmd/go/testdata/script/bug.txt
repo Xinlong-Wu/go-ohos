@@ -1,6 +1,6 @@
 # Verify that go bug creates the appropriate URL issue body
 
-[!GOOS:linux] skip
+[!GOOS:linux] [!GOOS:openharmony] skip
 [short] skip
 
 go install

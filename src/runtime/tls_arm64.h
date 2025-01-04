@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+#ifdef GOOS_openharmony
+#define TLS_linux
+#endif
+
 #ifdef GOOS_android
 #define TLS_linux
 #define TLSG_IS_VARIABLE
