@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <oatconfig>
+        <policylist>
+            <policy name="defaultPolicy" desc="">
+                <policyitem type="license" name="BSD" path=".*" rule="may" group="defaultGroup" filefilter="defaultPolicyFilter" desc=""/>
+                <policyitem type="copyright" name="The Go Authors" path=".*" rule="may" group="defaultGroup" filefilter="copyrightPolicyFilter" desc=""/>
+            </policy>
+        </policylist>
         <filefilterlist>
             <filefilter desc="Filters for compatibility,license header policies" name="copyrightPolicyFilter">
                 <filteritem desc="版权文件，不添加版权头" name="LICENSE" type="filename"/>
