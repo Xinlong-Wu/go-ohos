@@ -26,7 +26,11 @@ import (
 	"unicode"
 )
 
-var globalSkip = func(t *testing.T) {}
+var globalSkip = func(t *testing.T) {
+	if GOOS == "openharmony" {
+		t.Skip("openharmony system use musllibc, runtime: c-shared builds fail with musllibc - go.dev/issue/13492")
+	}
+}
 
 // C compiler with args (from $(go env CC) $(go env GOGCCFLAGS)).
 var cc []string
@@ -49,7 +53,7 @@ func testMain(m *testing.M) int {
 		globalSkip = func(t *testing.T) { t.Skip("short mode and $GO_BUILDER_NAME not set") }
 		return m.Run()
 	}
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" || runtime.GOOS == "openharmony" {
 		if _, err := os.Stat("/etc/alpine-release"); err == nil {
 			globalSkip = func(t *testing.T) { t.Skip("skipping failing test on alpine - go.dev/issue/19938") }
 			return m.Run()
@@ -118,7 +122,7 @@ func testMain(m *testing.M) int {
 		if GOARCH == "arm64" {
 			libgodir += "_shared"
 		}
-	case "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "solaris", "illumos":
+	case "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "solaris", "illumos", "openharmony":
 		libgodir += "_shared"
 	}
 	cc = append(cc, "-I", filepath.Join("pkg", libgodir))
@@ -651,7 +655,7 @@ func TestSignalHandlersWithNotify(t *testing.T) {
 
 func TestPIE(t *testing.T) {
 	switch GOOS {
-	case "linux", "android":
+	case "linux", "android", "openharmony":
 		break
 	default:
 		t.Skipf("Skipping on %s", GOOS)

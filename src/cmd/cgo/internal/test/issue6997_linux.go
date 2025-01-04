@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !android
+//go:build !android && !openharmony
 
 // Test that pthread_cancel works as expected
 // (NPTL uses SIGRTMIN to implement thread cancellation)

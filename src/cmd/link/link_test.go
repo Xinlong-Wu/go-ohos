@@ -770,7 +770,7 @@ DATA	·alignPcFnAddr(SB)/8,$·alignPc(SB)
 // with a specific value on arm64 and loong64.
 func TestFuncAlign(t *testing.T) {
 	testFuncAlignAsmSrc := testFuncAlignAsmSources[runtime.GOARCH]
-	if len(testFuncAlignAsmSrc) == 0 || runtime.GOOS != "linux" {
+	if len(testFuncAlignAsmSrc) == 0 || (runtime.GOOS != "linux" && runtime.GOOS != "openharmony") {
 		t.Skip("skipping on non-linux/{arm64,loong64} platform")
 	}
 	testenv.MustHaveGoBuild(t)

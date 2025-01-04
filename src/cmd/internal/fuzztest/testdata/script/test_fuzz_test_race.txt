@@ -2,6 +2,7 @@
 # and seed values are being executed, the race detector isn't mistakenly
 # triggered.
 
+[GOOS:openharmony] skip '-race mode not supported in openharmony'
 [short] skip
 [!fuzz] skip
 [!race] skip

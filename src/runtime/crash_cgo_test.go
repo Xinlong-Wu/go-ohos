@@ -301,6 +301,7 @@ func TestCgoCrashTraceback(t *testing.T) {
 	case "linux/arm64":
 	case "linux/loong64":
 	case "linux/ppc64le":
+	case "openharmony/arm64":
 	default:
 		t.Skipf("not yet supported on %s", platform)
 	}
@@ -326,6 +327,7 @@ func TestCgoCrashTracebackGo(t *testing.T) {
 	case "linux/arm64":
 	case "linux/loong64":
 	case "linux/ppc64le":
+	case "openharmony/arm64":
 	default:
 		t.Skipf("not yet supported on %s", platform)
 	}
@@ -379,7 +381,7 @@ func TestCgoTracebackContextProfile(t *testing.T) {
 
 func testCgoPprof(t *testing.T, buildArg, runArg, top, bottom string) {
 	t.Parallel()
-	if runtime.GOOS != "linux" || (runtime.GOARCH != "amd64" && runtime.GOARCH != "ppc64le" && runtime.GOARCH != "arm64" && runtime.GOARCH != "loong64") {
+	if (runtime.GOOS != "linux" && runtime.GOOS != "openharmony") || (runtime.GOARCH != "amd64" && runtime.GOARCH != "ppc64le" && runtime.GOARCH != "arm64" && runtime.GOARCH != "loong64") {
 		t.Skipf("not yet supported on %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 	if runtime.GOOS == "freebsd" && race.Enabled {
@@ -753,7 +755,7 @@ func TestSegv(t *testing.T) {
 
 	for _, test := range []string{"Segv", "SegvInCgo", "TgkillSegv", "TgkillSegvInCgo"} {
 		// The tgkill variants only run on Linux.
-		if runtime.GOOS != "linux" && strings.HasPrefix(test, "Tgkill") {
+		if !(runtime.GOOS == "linux" || runtime.GOOS == "openharmony") && strings.HasPrefix(test, "Tgkill") {
 			continue
 		}
 

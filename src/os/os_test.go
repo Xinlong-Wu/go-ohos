@@ -626,7 +626,7 @@ func TestReaddirnamesOneAtATime(t *testing.T) {
 	// big directory that doesn't change often.
 	dir := "/usr/bin"
 	switch runtime.GOOS {
-	case "android":
+	case "android", "openharmony":
 		dir = "/system/bin"
 	case "ios", "wasip1":
 		wd, err := Getwd()
@@ -1627,7 +1627,7 @@ func TestChdirAndGetwd(t *testing.T) {
 	dirs := []string{"/", "/usr/bin", "/tmp"}
 	// /usr/bin does not usually exist on Plan 9 or Android.
 	switch runtime.GOOS {
-	case "android":
+	case "android", "openharmony":
 		dirs = []string{"/system/bin"}
 	case "plan9":
 		dirs = []string{"/", "/usr"}

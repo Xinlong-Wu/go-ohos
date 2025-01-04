@@ -686,7 +686,7 @@ func (p *Package) recordTypes(f *File, data *debug, conv *typeConv) {
 			n.Kind = "func"
 			n.FuncType = conv.FuncType(f, pos)
 		} else {
-			n.Type = conv.Type(types[i], pos)
+			n.Type = conv.Type(unqual(types[i]), pos)
 			switch n.Kind {
 			case "iconst":
 				if i < len(ints) {

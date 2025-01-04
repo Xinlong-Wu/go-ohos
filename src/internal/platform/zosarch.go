@@ -50,6 +50,7 @@ var List = []OSArch{
 	{"openbsd", "mips64"},
 	{"openbsd", "ppc64"},
 	{"openbsd", "riscv64"},
+	{"openharmony", "arm64"},
 	{"plan9", "386"},
 	{"plan9", "amd64"},
 	{"plan9", "arm"},
@@ -111,4 +112,5 @@ var distInfo = map[OSArch]osArchInfo{
 	{"windows", "386"}:     {CgoSupported: true, FirstClass: true},
 	{"windows", "amd64"}:   {CgoSupported: true, FirstClass: true},
 	{"windows", "arm64"}:   {CgoSupported: true},
+	{"openharmony", "arm64"}: {CgoSupported: true, FirstClass: true},
 }

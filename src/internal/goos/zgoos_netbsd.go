@@ -18,6 +18,7 @@ const IsJs = 0
 const IsLinux = 0
 const IsNacl = 0
 const IsNetbsd = 1
+const IsOpenharmony = 0
 const IsOpenbsd = 0
 const IsPlan9 = 0
 const IsSolaris = 0

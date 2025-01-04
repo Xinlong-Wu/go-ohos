@@ -208,7 +208,7 @@ func matchTag(name string, tags map[string]bool, prefer bool) bool {
 
 	switch name {
 	case "linux":
-		return tags["android"]
+		return tags["android"] || tags["openharmony"]
 	case "solaris":
 		return tags["illumos"]
 	case "darwin":

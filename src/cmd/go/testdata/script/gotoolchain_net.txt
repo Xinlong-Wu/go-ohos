@@ -1,3 +1,4 @@
+[GOOS:openharmony] skip 'downloading go tool chain from net not supported in openharmony'
 # This test only checks that basic network lookups work.
 # The full test of toolchain version selection is in gotoolchain.txt.
 

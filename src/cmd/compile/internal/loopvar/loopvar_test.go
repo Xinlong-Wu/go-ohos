@@ -168,9 +168,9 @@ func countMatches(s, re string) int {
 func TestLoopVarHashes(t *testing.T) {
 	// This behavior does not depend on Go version (1.21 or greater)
 	switch runtime.GOOS {
-	case "linux", "darwin":
+	case "linux", "darwin", "openharmony":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":
@@ -229,9 +229,9 @@ func TestLoopVarHashes(t *testing.T) {
 // TestLoopVarVersionEnableFlag checks for loopvar transformation enabled by command line flag (1.22).
 func TestLoopVarVersionEnableFlag(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin":
+	case "linux", "darwin", "openharmony":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":
@@ -268,9 +268,9 @@ func TestLoopVarVersionEnableFlag(t *testing.T) {
 // TestLoopVarVersionEnableGoBuild checks for loopvar transformation enabled by go:build version (1.22).
 func TestLoopVarVersionEnableGoBuild(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin":
+	case "linux", "darwin", "openharmony":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":
@@ -307,9 +307,9 @@ func TestLoopVarVersionEnableGoBuild(t *testing.T) {
 // TestLoopVarVersionDisableFlag checks for loopvar transformation DISABLED by command line version (1.21).
 func TestLoopVarVersionDisableFlag(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin":
+	case "linux", "darwin", "openharmony":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":
@@ -346,9 +346,9 @@ func TestLoopVarVersionDisableFlag(t *testing.T) {
 // TestLoopVarVersionDisableGoBuild checks for loopvar transformation DISABLED by go:build version (1.21).
 func TestLoopVarVersionDisableGoBuild(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin":
+	case "linux", "darwin", "openharmony":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":

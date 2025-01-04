@@ -33,6 +33,7 @@ var KnownOS = map[string]bool{
 	"wasip1":    true,
 	"windows":   true,
 	"zos":       true,
+	"openharmony": true,
 }
 
 // UnixOS is the set of GOOS values matched by the "unix" build tag.
@@ -51,6 +52,7 @@ var UnixOS = map[string]bool{
 	"netbsd":    true,
 	"openbsd":   true,
 	"solaris":   true,
+	"openharmony": true,
 }
 
 // KnownArch is the list of past, present, and future known GOARCH values.

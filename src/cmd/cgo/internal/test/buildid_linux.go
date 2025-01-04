@@ -32,6 +32,9 @@ sections:
 		if s.Type != elf.SHT_NOTE {
 			continue
 		}
+		if s.Name == ".note.ohos.ident" {
+			continue // If the field is .note.ohos.ident, skip the field and do not parse it.
+		}
 
 		d, err := s.Data()
 		if err != nil {

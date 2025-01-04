@@ -985,7 +985,7 @@ func (b *Builder) build(ctx context.Context, a *Action) (err error) {
 	// This is read by readGccgoArchive in cmd/internal/buildid/buildid.go.
 	if a.buildID != "" && cfg.BuildToolchainName == "gccgo" {
 		switch cfg.Goos {
-		case "aix", "android", "dragonfly", "freebsd", "illumos", "linux", "netbsd", "openbsd", "solaris":
+		case "aix", "android", "dragonfly", "freebsd", "illumos", "linux", "netbsd", "openbsd", "solaris", "openharmony":
 			asmfile, err := b.gccgoBuildIDFile(a)
 			if err != nil {
 				return err
@@ -3553,7 +3553,7 @@ func swigOneOutputs(file, objdir string, cxx bool) (outGo, outC string) {
 // systems that normally use gold or the GNU linker.
 func (b *Builder) disableBuildID(ldflags []string) []string {
 	switch cfg.Goos {
-	case "android", "dragonfly", "linux", "netbsd":
+	case "android", "dragonfly", "linux", "netbsd", "openharmony":
 		ldflags = append(ldflags, "-Wl,--build-id=none")
 	}
 	return ldflags
