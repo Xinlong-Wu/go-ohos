@@ -169,7 +169,7 @@ func countMatches(s, re string) int {
 func TestLoopVarHashes(t *testing.T) {
 	// This behavior does not depend on Go version (1.21 or greater)
 	switch runtime.GOOS {
-	case "linux", "darwin", "openharmony":
+	case "linux", "darwin":
 	default:
 		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
@@ -230,7 +230,7 @@ func TestLoopVarHashes(t *testing.T) {
 // TestLoopVarVersionEnableFlag checks for loopvar transformation enabled by command line flag (1.22).
 func TestLoopVarVersionEnableFlag(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin", "openharmony":
+	case "linux", "darwin":
 	default:
 		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
@@ -269,7 +269,7 @@ func TestLoopVarVersionEnableFlag(t *testing.T) {
 // TestLoopVarVersionEnableGoBuild checks for loopvar transformation enabled by go:build version (1.22).
 func TestLoopVarVersionEnableGoBuild(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin", "openharmony":
+	case "linux", "darwin":
 	default:
 		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
@@ -308,7 +308,7 @@ func TestLoopVarVersionEnableGoBuild(t *testing.T) {
 // TestLoopVarVersionDisableFlag checks for loopvar transformation DISABLED by command line version (1.21).
 func TestLoopVarVersionDisableFlag(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin", "openharmony":
+	case "linux", "darwin":
 	default:
 		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
@@ -347,7 +347,7 @@ func TestLoopVarVersionDisableFlag(t *testing.T) {
 // TestLoopVarVersionDisableGoBuild checks for loopvar transformation DISABLED by go:build version (1.21).
 func TestLoopVarVersionDisableGoBuild(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin", "openharmony":
+	case "linux", "darwin":
 	default:
 		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}

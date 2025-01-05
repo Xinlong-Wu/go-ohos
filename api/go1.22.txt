@@ -133,3 +133,5 @@ pkg syscall (linux-amd64-cgo), type SysProcAttr struct, PidFD *int #51246
 pkg syscall (linux-arm), type SysProcAttr struct, PidFD *int #51246
 pkg syscall (linux-arm-cgo), type SysProcAttr struct, PidFD *int #51246
 pkg testing/slogtest, func Run(*testing.T, func(*testing.T) slog.Handler, func(*testing.T) map[string]interface{}) #61758
+pkg runtime, const IsOpenharmony bool #gitee/IBFOQM
+pkg runtime, const IsOpenharmony = false #gitee/IBFOQM

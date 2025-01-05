@@ -423,7 +423,7 @@ func (ctxt *context) match(name string) bool {
 		return true
 	}
 
-	if name == ctxt.GOOS || name == ctxt.GOARCH || name == "gc" {
+	if name == ctxt.GOOS || (name == "linux" && ctxt.GOOS == "openharmony") || name == ctxt.GOARCH || name == "gc" {
 		return true
 	}
 

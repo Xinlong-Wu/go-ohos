@@ -368,7 +368,7 @@ func defaultContext() Context {
 		c.CgoEnabled = false
 	default:
 		// cgo must be explicitly enabled for cross compilation builds
-		if runtime.GOARCH == c.GOARCH && runtime.GOOS == c.GOOS {
+		if runtime.GOARCH == c.GOARCH && (runtime.GOOS == c.GOOS || (runtime.IsOpenharmony && c.GOOS == "openharmony")) {
 			c.CgoEnabled = platform.CgoSupported(c.GOOS, c.GOARCH)
 			break
 		}

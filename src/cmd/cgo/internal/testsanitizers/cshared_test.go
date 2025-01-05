@@ -12,6 +12,7 @@ import (
 	"internal/testenv"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -29,7 +30,7 @@ func TestShared(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if GOOS == "openharmony" {
+	if runtime.IsOpenharmony {
 		t.Skip("openharmony system use musllibc, runtime: c-shared builds fail with musllibc - go.dev/issue/13492")
 	}
 

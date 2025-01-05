@@ -10,7 +10,7 @@ import (
 )
 
 func TestHeapAddrBitsValue(t *testing.T) {
-	if GOARCH == "arm64" && GOOS == "openharmony" {
+	if GOARCH == "arm64" && IsOpenharmony {
 		if HeapAddrBits != 39 {
 			t.Fatalf("heapAddrBits = %d, want 39", HeapAddrBits)
 		}

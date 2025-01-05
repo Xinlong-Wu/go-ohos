@@ -1302,7 +1302,7 @@ func testFileServerErrorMessages(t *testing.T, mode testMode, keepHeaders bool) 
 func TestLinuxSendfile(t *testing.T) {
 	setParallel(t)
 	defer afterTest(t)
-	if runtime.GOOS != "linux" && runtime.GOOS != "openharmony" {
+	if runtime.GOOS != "linux" {
 		t.Skipf("skipping; not supported on %v", runtime.GOOS)
 	}
 	if _, err := exec.LookPath("strace"); err != nil {

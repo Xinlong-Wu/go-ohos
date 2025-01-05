@@ -60,7 +60,7 @@ func TestCrashDumpsAllThreads(t *testing.T) {
 	}
 
 	switch runtime.GOOS {
-	case "darwin", "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "illumos", "solaris", "openharmony":
+	case "darwin", "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "illumos", "solaris":
 	default:
 		t.Skipf("skipping; not supported on %v", runtime.GOOS)
 	}
@@ -276,7 +276,7 @@ func TestSignalIgnoreSIGTRAP(t *testing.T) {
 
 func TestSignalDuringExec(t *testing.T) {
 	switch runtime.GOOS {
-	case "darwin", "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "openharmony":
+	case "darwin", "dragonfly", "freebsd", "linux", "netbsd", "openbsd":
 	default:
 		t.Skipf("skipping test on %s", runtime.GOOS)
 	}

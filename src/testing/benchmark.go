@@ -274,7 +274,11 @@ var labelsOnce sync.Once
 // subbenchmarks. b must not have subbenchmarks.
 func (b *B) run() {
 	labelsOnce.Do(func() {
-		fmt.Fprintf(b.w, "goos: %s\n", runtime.GOOS)
+		goos := runtime.GOOS
+		if runtime.IsOpenharmony {
+			goos = "openharmony"
+		}
+		fmt.Fprintf(b.w, "goos: %s\n", goos)
 		fmt.Fprintf(b.w, "goarch: %s\n", runtime.GOARCH)
 		if b.importPath != "" {
 			fmt.Fprintf(b.w, "pkg: %s\n", b.importPath)

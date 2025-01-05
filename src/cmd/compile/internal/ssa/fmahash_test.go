@@ -18,7 +18,7 @@ import (
 // The test file is however a useful example of fused-vs-cascaded multiply-add.
 func TestFmaHash(t *testing.T) {
 	switch runtime.GOOS {
-	case "linux", "darwin", "openharmony":
+	case "linux", "darwin":
 	default:
 		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}

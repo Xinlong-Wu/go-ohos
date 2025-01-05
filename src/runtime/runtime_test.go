@@ -24,6 +24,13 @@ import (
 	"unsafe"
 )
 
+func getGoos() string {
+	if IsOpenharmony {
+		return "openharmony"
+	}
+	return GOOS
+}
+
 // flagQuick is set by the -quick option to skip some relatively slow tests.
 // This is used by the cmd/dist test runtime:cpu124.
 // The cmd/dist test passes both -test.short and -quick;

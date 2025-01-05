@@ -231,7 +231,7 @@ func scriptEnv(srv *vcstest.Server, srvCertFile string) ([]string, error) {
 		"GODEBUG=" + os.Getenv("GODEBUG"),
 		"GOEXE=" + cfg.ExeSuffix,
 		"GOEXPERIMENT=" + os.Getenv("GOEXPERIMENT"),
-		"GOOS=" + runtime.GOOS,
+		"GOOS=" + goos,
 		"TESTGO_GOHOSTOS=" + goHostOS,
 		"GOPROXY=" + proxyURL,
 		"GOPRIVATE=",

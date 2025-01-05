@@ -328,6 +328,8 @@ func fileFeatures(filename string, needApproval bool) []string {
 			if !ok {
 				log.Printf("%s:%d: missing proposal approval\n", filename, i+1)
 				exitCode = 1
+			} else if strings.HasPrefix(approval, "gitee/") {
+				// gitee issue id is not pure number
 			} else {
 				_, err := strconv.Atoi(approval)
 				if err != nil {

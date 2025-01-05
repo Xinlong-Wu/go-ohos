@@ -770,7 +770,7 @@ DATA	·alignPcFnAddr(SB)/8,$·alignPc(SB)
 // with a specific value on arm64 and loong64.
 func TestFuncAlign(t *testing.T) {
 	testFuncAlignAsmSrc := testFuncAlignAsmSources[runtime.GOARCH]
-	if len(testFuncAlignAsmSrc) == 0 || (runtime.GOOS != "linux" && runtime.GOOS != "openharmony") {
+	if len(testFuncAlignAsmSrc) == 0 || runtime.GOOS != "linux" {
 		t.Skip("skipping on non-linux/{arm64,loong64} platform")
 	}
 	testenv.MustHaveGoBuild(t)
@@ -1269,7 +1269,7 @@ func main() {
 func TestIssue42396(t *testing.T) {
 	testenv.MustHaveGoBuild(t)
 
-	if !platform.RaceDetectorSupported(runtime.GOOS, runtime.GOARCH) {
+	if !platform.RaceDetectorSupported(runtime.GOOS, runtime.GOARCH) || runtime.IsOpenharmony {
 		t.Skip("no race detector support")
 	}
 

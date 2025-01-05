@@ -27,13 +27,20 @@ type splitTestWithLine struct {
 
 const anyLineNo = 0
 
+func getGoos() string {
+	if runtime.IsOpenharmony {
+		return "openharmony"
+	}
+	return runtime.GOOS
+}
+
 var splitTests = []splitTest{
 	{"", nil},
 	{"x", []string{"x"}},
 	{" a b\tc ", []string{"a", "b", "c"}},
 	{` " a " `, []string{" a "}},
 	{"$GOARCH", []string{runtime.GOARCH}},
-	{"$GOOS", []string{runtime.GOOS}},
+	{"$GOOS", []string{getGoos()}},
 	{"$GOFILE", []string{"proc.go"}},
 	{"$GOPACKAGE", []string{"sys"}},
 	{"a $XXNOTDEFINEDXX b", []string{"a", "", "b"}},

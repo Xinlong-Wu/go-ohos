@@ -86,7 +86,7 @@ func f2() { f2() }
 // to use in test profiles.
 func testPCs(t *testing.T) (addr1, addr2 uint64, map1, map2 *profile.Mapping) {
 	switch runtime.GOOS {
-	case "linux", "android", "netbsd", "openharmony":
+	case "linux", "android", "netbsd":
 		// Figure out two addresses from /proc/self/maps.
 		mmap, err := os.ReadFile("/proc/self/maps")
 		if err != nil {

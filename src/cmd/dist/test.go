@@ -1200,6 +1200,9 @@ func (t *tester) internalLink() bool {
 	if goos == "android" {
 		return false
 	}
+	if goos == "openharmony" {
+		return false
+	}
 	if goos == "ios" {
 		return false
 	}
@@ -1328,8 +1331,7 @@ func (t *tester) registerCgoTests(heading string) {
 			}
 		}
 
-	case os == "aix", os == "android", os == "dragonfly", os == "freebsd", os == "linux", os == "netbsd", os == "openbsd",
-		os == "openharmony":
+	case os == "aix", os == "android", os == "dragonfly", os == "freebsd", os == "linux", os == "netbsd", os == "openbsd":
 		gt := cgoTest("external-g0", "test", "external", "")
 		gt.env = append(gt.env, "CGO_CFLAGS=-g0 -fdiagnostics-color")
 

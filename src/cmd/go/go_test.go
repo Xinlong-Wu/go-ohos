@@ -63,6 +63,7 @@ var (
 var (
 	goHostOS, goHostArch string
 	cgoEnabled           string // raw value from 'go env CGO_ENABLED'
+	goos                 string
 )
 
 // netTestSem is a semaphore limiting the number of tests that may use the
@@ -238,6 +239,10 @@ func TestMain(m *testing.M) {
 		os.Setenv("TESTGO_GOHOSTARCH", goHostArch)
 
 		cgoEnabled = goEnv("CGO_ENABLED")
+		goos = runtime.GOOS
+		if runtime.IsOpenharmony {
+			goos = "openharmony"
+		}
 
 		// Duplicate the test executable into the path at testGo, for $PATH.
 		// If the OS supports symlinks, use them instead of copying bytes.
@@ -362,7 +367,7 @@ func TestMain(m *testing.M) {
 }
 
 func isAlpineLinux() bool {
-	if runtime.GOOS != "linux" && runtime.GOOS != "openharmony" {
+	if runtime.GOOS != "linux" {
 		return false
 	}
 	fi, err := os.Lstat("/etc/alpine-release")
@@ -2000,7 +2005,7 @@ func testBuildmodePIE(t *testing.T, useCgo, setBuildmodeToPIE bool) {
 	tg.run(args...)
 
 	switch runtime.GOOS {
-	case "linux", "android", "freebsd", "openharmony":
+	case "linux", "android", "freebsd":
 		f, err := elf.Open(obj)
 		if err != nil {
 			t.Fatal(err)

@@ -24,7 +24,11 @@ func TestRepeatBootstrap(t *testing.T) {
 		t.Skip("skipping test that rebuilds the entire toolchain")
 	}
 	switch runtime.GOOS {
-	case "android", "ios", "js", "wasip1", "openharmony":
+	case "linux":
+		if runtime.IsOpenharmony {
+			t.Skipf("skipping because the toolchain does not have to bootstrap on openharmony")
+		}
+	case "android", "ios", "js", "wasip1":
 		t.Skipf("skipping because the toolchain does not have to bootstrap on GOOS=%s", runtime.GOOS)
 	}
 

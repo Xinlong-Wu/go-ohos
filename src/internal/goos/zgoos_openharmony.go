@@ -4,7 +4,7 @@
 
 package goos
 
-const GOOS = `openharmony`
+const GOOS = `linux`
 
 const IsAix = 0
 const IsAndroid = 0
