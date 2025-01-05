@@ -141,11 +141,15 @@ func defaultContext() build.Context {
 	// Recreate that logic here with the new GOOS/GOARCH setting.
 	// We need to run steps 2 and 3 to determine what the default value
 	// of CgoEnabled would be for computing CGOChanged.
+	gohostos := runtime.GOOS
+	if runtime.IsOpenharmony {
+		gohostos = "openharmony"
+	}
 	defaultCgoEnabled := false
 	if buildcfg.DefaultCGO_ENABLED == "1" {
 		defaultCgoEnabled = true
 	} else if buildcfg.DefaultCGO_ENABLED == "0" {
-	} else if runtime.GOARCH == ctxt.GOARCH && runtime.GOOS == ctxt.GOOS {
+	} else if runtime.GOARCH == ctxt.GOARCH && gohostos == ctxt.GOOS {
 		defaultCgoEnabled = platform.CgoSupported(ctxt.GOOS, ctxt.GOARCH)
 		// Use built-in default cgo setting for GOOS/GOARCH.
 		// Note that ctxt.GOOS/GOARCH are derived from the preference list
@@ -264,7 +268,9 @@ func SetGOROOT(goroot string, isTestGo bool) {
 			installedGOARCH = testArch
 		}
 	}
-
+	if runtime.IsOpenharmony {
+		installedGOOS = "openharmony"
+	}
 	if runtime.Compiler != "gccgo" {
 		if goroot == "" {
 			build.ToolDir = ""

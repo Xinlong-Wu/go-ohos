@@ -1696,7 +1696,7 @@ func (ctxt *Link) hostlink() {
 
 		// On ohos, since RTLD_GLOBAL is ignored by dlopen since it's following bionic, so need set to .dynamic
 		// https://github.com/bminor/glibc/blob/895ef79e04a953cac1493863bcae29ad85657ee1/elf/elf.h#L960
-		if runtime.GOOS == "openharmony" {
+		if buildcfg.GOOS == "openharmony" {
 			argv = append(argv, "-Wl,-z,global")
 		}
 

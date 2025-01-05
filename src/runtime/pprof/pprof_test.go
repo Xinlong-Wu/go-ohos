@@ -114,7 +114,7 @@ func TestCPUProfileMultithreaded(t *testing.T) {
 }
 
 func TestCPUProfileMultithreadMagnitude(t *testing.T) {
-	if !(runtime.GOOS == "linux" || runtime.GOOS == "openharmony") {
+	if runtime.GOOS != "linux" {
 		t.Skip("issue 35057 is only confirmed on Linux")
 	}
 

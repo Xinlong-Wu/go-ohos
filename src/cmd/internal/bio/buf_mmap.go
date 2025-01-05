@@ -27,7 +27,7 @@ var mmapLimit int32 = 1<<31 - 1
 
 func init() {
 	// Linux is the only practically concerning OS.
-	if runtime.GOOS == "linux" || runtime.GOOS == "openharmony" {
+	if runtime.GOOS == "linux" {
 		mmapLimit = 30000
 	}
 }

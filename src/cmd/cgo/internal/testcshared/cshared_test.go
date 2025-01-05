@@ -27,7 +27,7 @@ import (
 )
 
 var globalSkip = func(t *testing.T) {
-	if GOOS == "openharmony" {
+	if runtime.IsOpenharmony {
 		t.Skip("openharmony system use musllibc, runtime: c-shared builds fail with musllibc - go.dev/issue/13492")
 	}
 }
@@ -53,7 +53,7 @@ func testMain(m *testing.M) int {
 		globalSkip = func(t *testing.T) { t.Skip("short mode and $GO_BUILDER_NAME not set") }
 		return m.Run()
 	}
-	if runtime.GOOS == "linux" || runtime.GOOS == "openharmony" {
+	if runtime.GOOS == "linux" {
 		if _, err := os.Stat("/etc/alpine-release"); err == nil {
 			globalSkip = func(t *testing.T) { t.Skip("skipping failing test on alpine - go.dev/issue/19938") }
 			return m.Run()

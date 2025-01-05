@@ -466,7 +466,7 @@ func TestIssue56006EmitDataRaceCoverRunningGoroutine(t *testing.T) {
 	// go build, go run, and "-race" support.
 	testenv.MustHaveGoRun(t)
 	if !platform.RaceDetectorSupported(runtime.GOOS, runtime.GOARCH) ||
-		!testenv.HasCGO() {
+		!testenv.HasCGO() || runtime.IsOpenharmony {
 		t.Skip("skipped due to lack of race detector support / CGO")
 	}
 

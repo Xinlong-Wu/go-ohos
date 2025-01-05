@@ -34,7 +34,7 @@ import (
 )
 
 var globalSkip = func(t testing.TB) {
-	if GOOS == "openharmony" {
+	if runtime.IsOpenharmony {
 		t.Skip("openharmony system use musllibc, runtime: c-archive builds fail with musllibc - go.dev/issue/13492")
 	}
 }

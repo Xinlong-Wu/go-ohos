@@ -25,6 +25,9 @@ func DefaultConds() map[string]Cond {
 			if suffix == runtime.GOOS {
 				return true, nil
 			}
+			if suffix == "openharmony" && runtime.IsOpenharmony {
+				return true, nil
+			}
 			if _, ok := syslist.KnownOS[suffix]; !ok {
 				return false, fmt.Errorf("unrecognized GOOS %q", suffix)
 			}

@@ -122,12 +122,12 @@ func printOSDetails(w io.Writer) {
 	case "darwin", "ios":
 		printCmdOut(w, "uname -v: ", "uname", "-v")
 		printCmdOut(w, "", "sw_vers")
-	case "openharmony":
-		printCmdOut(w, "uname -sr: ", "uname", "-sr")
 	case "linux":
 		printCmdOut(w, "uname -sr: ", "uname", "-sr")
-		printCmdOut(w, "", "lsb_release", "-a")
-		printGlibcVersion(w)
+		if !runtime.IsOpenharmony {
+			printCmdOut(w, "", "lsb_release", "-a")
+			printGlibcVersion(w)
+		}
 	case "openbsd", "netbsd", "freebsd", "dragonfly":
 		printCmdOut(w, "uname -v: ", "uname", "-v")
 	case "illumos", "solaris":

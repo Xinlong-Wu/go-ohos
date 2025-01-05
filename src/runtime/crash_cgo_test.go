@@ -755,7 +755,7 @@ func TestSegv(t *testing.T) {
 
 	for _, test := range []string{"Segv", "SegvInCgo", "TgkillSegv", "TgkillSegvInCgo"} {
 		// The tgkill variants only run on Linux.
-		if !(runtime.GOOS == "linux" || runtime.GOOS == "openharmony") && strings.HasPrefix(test, "Tgkill") {
+		if runtime.GOOS != "linux" && strings.HasPrefix(test, "Tgkill") {
 			continue
 		}
 

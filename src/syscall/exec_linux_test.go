@@ -30,6 +30,13 @@ import (
 	"unsafe"
 )
 
+func getGoos() string {
+	if runtime.IsOpenharmony {
+		return "openharmony"
+	}
+	return runtime.GOOS
+}
+
 // whoamiNEWUSER returns a command that runs "whoami" with CLONE_NEWUSER,
 // mapping uid and gid 0 to the actual uid and gid of the test.
 func whoamiNEWUSER(t *testing.T, uid, gid int, setgroups bool) *exec.Cmd {
@@ -286,8 +293,8 @@ func TestUnshareMountNameSpaceChroot(t *testing.T) {
 	// Since we are doing a chroot, we need the binary there,
 	// and it must be statically linked.
 	testenv.MustHaveGoBuild(t)
-	if platform.MustLinkExternal(runtime.GOOS, runtime.GOARCH, false) {
-		t.Skipf("skipping: can't build static binary because %s/%s requires external linking", runtime.GOOS, runtime.GOARCH)
+	if platform.MustLinkExternal(getGoos(), runtime.GOARCH, false) {
+		t.Skipf("skipping: can't build static binary because %s/%s requires external linking", getGoos(), runtime.GOARCH)
 	}
 	x := filepath.Join(d, "syscall.test")
 	t.Cleanup(func() {
@@ -646,6 +653,11 @@ func testAmbientCaps(t *testing.T, userns bool) {
 	// skip on android, due to lack of lookup support
 	if runtime.GOOS == "android" {
 		t.Skip("skipping test on android; see Issue 27327")
+	}
+
+	// skip on openharmony, due to lack of nobody user
+	if runtime.IsOpenharmony {
+		t.Skip("skipping test on openharmony, due to lack of nobody user")
 	}
 
 	u, err := user.Lookup("nobody")
