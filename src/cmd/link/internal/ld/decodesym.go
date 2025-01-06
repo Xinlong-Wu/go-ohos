@@ -218,10 +218,55 @@ func decodetypeStr(ldr *loader.Loader, arch *sys.Arch, symIdx loader.Sym) string
 	return str
 }
 
+// decodetypeGcprogShlibByReloc get GCData Field's value in type descriptor.
+// s is the type descriptor symbol.
+func decodetypeGcprogShlibByReloc(ctxt *Link, s loader.Sym) (uint64, bool) {
+	getShlib := func(path string) *Shlib {
+		for i, shlib := range ctxt.Shlibs {
+			if shlib.Path == path {
+				return &ctxt.Shlibs[i]
+			}
+		}
+		return nil
+	}
+	shlib := getShlib(ctxt.loader.SymPkg(s))
+	if shlib == nil {
+		Exitf("cannot find shlib for s=%d, name=%s, sympkg=%s\n",
+			s, ctxt.loader.SymName(s), ctxt.loader.SymPkg(s))
+	}
+
+	if shlib.addendMap == nil {
+		return 0, false
+	}
+
+	// The value of type descriptor symbol is the address of its data.
+	dataStartAddr, ok := ctxt.loader.GetShlibSymValue(s)
+	if !ok {
+		log.Printf("Warning: GetShlibSymValue failed for s=%d, name=%s, sympkg=%s\n",
+			s, ctxt.loader.SymName(s), ctxt.loader.SymPkg(s))
+		return 0, false
+	}
+
+	// Get the address of GcData field in type descriptor's data.
+	gcDataFieldAddr := dataStartAddr + uint64(2*int32(ctxt.Arch.PtrSize)+8+1*int32(ctxt.Arch.PtrSize))
+
+	addend, ok := shlib.addendMap[gcDataFieldAddr]
+	if !ok || addend == 0 {
+		log.Printf("Warning: get addend failed for s=%d, name=%s, sympkg=%s, gcDataFieldAddr=0x%x\n",
+			s, ctxt.loader.SymName(s), ctxt.loader.SymPkg(s), gcDataFieldAddr)
+		return 0, false
+	}
+
+	return uint64(addend), ok
+}
+
 func decodetypeGcmask(ctxt *Link, s loader.Sym) []byte {
 	if ctxt.loader.SymType(s) == sym.SDYNIMPORT {
 		symData := ctxt.loader.Data(s)
-		addr := decodetypeGcprogShlib(ctxt, symData)
+		addr, ok := decodetypeGcprogShlibByReloc(ctxt, s)
+		if !ok {
+			addr = decodetypeGcprogShlib(ctxt, symData)
+		}
 		ptrdata := decodetypePtrdata(ctxt.Arch, symData)
 		sect := findShlibSection(ctxt, ctxt.loader.SymPkg(s), addr)
 		if sect != nil {
