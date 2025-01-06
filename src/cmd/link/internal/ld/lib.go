@@ -2728,6 +2728,10 @@ func ldshlibsyms(ctxt *Link, shlib string) {
 			sname := l.SymName(s)
 			if strings.HasPrefix(sname, "type:") && !strings.HasPrefix(sname, "type:.") {
 				su.SetData(readelfsymboldata(ctxt, f, &elfsym))
+				if elfsym.Value != 0 {
+					// record the symbol value in shlib.
+					l.SetShlibSymValue(s, elfsym.Value)
+				}
 			}
 		}
 
@@ -2809,7 +2813,69 @@ func ldshlibsyms(ctxt *Link, shlib string) {
 		relocTarget[off] = syms[idx-1].Name
 	}
 
-	ctxt.Shlibs = append(ctxt.Shlibs, Shlib{Path: libpath, Hash: hash, Deps: deps, File: f, symAddr: symAddr, relocTarget: relocTarget})
+	addendMap := getRelocAddendMapShlib(f, libpath)
+	ctxt.Shlibs = append(ctxt.Shlibs, Shlib{Path: libpath, Hash: hash, Deps: deps, File: f, addendMap: addendMap})
+}
+
+// getRelocAddendMapShlib generate a map.
+// key is r_offset, value is r_addend.
+// Reference to debug.(*elf).applyRelocations().
+func getRelocAddendMapShlib(f *elf.File, libpath string) map[uint64]int64 {
+	switch {
+	case f.Class == elf.ELFCLASS64 && f.Machine == elf.EM_AARCH64:
+		return getRelocAddendMapShlibARM64(f, libpath)
+	default:
+		// not implement of others
+	}
+	return nil
+}
+
+func getRelocAddendMapShlibARM64(f *elf.File, libpath string) map[uint64]int64 {
+	addendMap := make(map[uint64]int64)
+	for _, sect := range f.Sections {
+		if sect.Type != elf.SHT_RELA {
+			// not implement for elf.SHT_REL
+			continue
+		}
+		sectData, err := sect.Data()
+		if err != nil {
+			log.Fatalf("malformed shlib %s, cannot read rela data from sect %s",
+				libpath, sect.Name)
+		}
+		entSize := 24
+		if len(sectData)%entSize != 0 {
+			log.Fatalf("malformed shlib %s, sect %s size=%d",
+				libpath, sect.Name, len(sectData))
+		}
+		relocsNum := len(sectData) / entSize
+		b := bytes.NewReader(sectData)
+		var rela elf.Rela64
+
+		for j := 0; j < relocsNum; j++ {
+			err := binary.Read(b, f.ByteOrder, &rela)
+			if err != nil {
+				log.Fatalf("malformed shlib %s, read rela data failed from sect %s",
+					libpath, sect.Name)
+			}
+			symNo := rela.Info >> 32
+			t := elf.R_AARCH64(rela.Info & 0xffff)
+			if symNo != 0 {
+				// not implement for symNo != 0
+				continue
+			}
+			switch t {
+			case elf.R_AARCH64_RELATIVE:
+				if v, ok := addendMap[rela.Off]; ok {
+					log.Printf("Warning: offset already existed, offset=%d, addend=%d, new addend=%d\n",
+						rela.Off, v, rela.Addend)
+				}
+				addendMap[rela.Off] = rela.Addend
+			default:
+				// not implement of other types
+			}
+		}
+	}
+	return addendMap
 }
 
 func addsection(ldr *loader.Loader, arch *sys.Arch, seg *sym.Segment, name string, rwx int) *sym.Section {

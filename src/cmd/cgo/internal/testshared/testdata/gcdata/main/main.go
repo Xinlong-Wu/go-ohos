@@ -19,11 +19,16 @@ import (
 )
 
 var x p.T
+var y p.BT
 
 func main() {
 	for i := range x {
 		x[i] = new(int)
 		*x[i] = 12345
+	}
+	for i := range y {
+		y[i] = new(int)
+		*y[i] = 12345
 	}
 	runtime.GC()
 	runtime.GC()
@@ -31,6 +36,12 @@ func main() {
 	for i := range x {
 		if *x[i] != 12345 {
 			fmt.Printf("x[%d] == %d, want 12345\n", i, *x[i])
+			panic("FAIL")
+		}
+	}
+	for i := range y {
+		if *y[i] != 12345 {
+			fmt.Printf("y[%d] == %d, want 12345\n", i, *y[i])
 			panic("FAIL")
 		}
 	}

@@ -194,6 +194,8 @@ type Loader struct {
 	payloads     []*extSymPayload // contents of linker-materialized external syms
 	values       []int64          // symbol values, indexed by global sym index
 
+	shlibSymValues map[Sym]uint64 // record symbol values of shlib symbols
+
 	sects    []*sym.Section // sections
 	symSects []uint16       // symbol's section, index to sects array
 
@@ -332,6 +334,7 @@ func NewLoader(flags uint32, reporter *ErrorReporter) *Loader {
 		attrCgoExportStatic:  make(map[Sym]struct{}),
 		deferReturnTramp:     make(map[Sym]bool),
 		extStaticSyms:        make(map[nameVer]Sym),
+		shlibSymValues:       make(map[Sym]uint64),
 		builtinSyms:          make([]Sym, nbuiltin),
 		flags:                flags,
 		errorReporter:        reporter,
@@ -339,6 +342,15 @@ func NewLoader(flags uint32, reporter *ErrorReporter) *Loader {
 	}
 	reporter.ldr = ldr
 	return ldr
+}
+
+func (l *Loader) SetShlibSymValue(s Sym, v uint64) {
+	l.shlibSymValues[s] = v
+}
+
+func (l *Loader) GetShlibSymValue(s Sym) (uint64, bool) {
+	v, ok := l.shlibSymValues[s]
+	return v, ok
 }
 
 // Add object file r
@@ -2644,6 +2656,9 @@ func (l *Loader) CopySym(src, dst Sym) {
 	}
 	l.payloads[l.extIndex(dst)] = l.payloads[l.extIndex(src)]
 	l.SetSymPkg(dst, l.SymPkg(src))
+	if symValue, ok := l.GetShlibSymValue(src); ok {
+		l.SetShlibSymValue(dst, symValue)
+	}
 	// TODO: other attributes?
 }
 
