@@ -543,7 +543,7 @@ func sysSigaction(sig uint32, new, old *sigactiont) {
 		//
 		// Just ignore the error in these case. There isn't
 		// anything we can do about it anyhow.
-		if sig != 32 && sig != 33 && sig != 64 {
+		if sig != 32 && sig != 33 && sig != 64 && sig != 43 {
 			// Use system stack to avoid split stack overflow on ppc64/ppc64le.
 			systemstack(func() {
 				throw("sigaction failed")
