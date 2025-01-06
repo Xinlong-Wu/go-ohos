@@ -185,6 +185,12 @@ func goosPrefersCgo() bool {
 	case "android":
 		return true
 
+	case "linux":
+		if runtime.IsOpenharmony {
+			return true
+		}
+		return false
+
 	default:
 		return false
 	}
