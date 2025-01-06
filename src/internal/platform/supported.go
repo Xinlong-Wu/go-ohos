@@ -105,6 +105,8 @@ func MustLinkExternal(goos, goarch string, withCgo bool) bool {
 			// set up by the dynamic linker, so internal cgo linking
 			// doesn't work. Test case is "go test runtime/cgo".
 			return true
+		case "openharmony":
+			return true
 		}
 	}
 
