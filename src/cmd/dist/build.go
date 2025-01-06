@@ -323,8 +323,8 @@ func compilerEnv(envName, def string) map[string]string {
 // clangos lists the operating systems where we prefer clang to gcc.
 var clangos = []string{
 	"darwin", "ios", // macOS 10.9 and later require clang
-	"freebsd", // FreeBSD 10 and later do not ship gcc
-	"openbsd", // OpenBSD ships with GCC 4.2, which is now quite old.
+	"freebsd",     // FreeBSD 10 and later do not ship gcc
+	"openbsd",     // OpenBSD ships with GCC 4.2, which is now quite old.
 	"openharmony", // openharmony default CC is clang.
 }
 
@@ -640,6 +640,8 @@ func mustLinkExternal(goos, goarch string, cgoEnabled bool) bool {
 			// It seems that on Dragonfly thread local storage is
 			// set up by the dynamic linker, so internal cgo linking
 			// doesn't work. Test case is "go test runtime/cgo".
+			return true
+		case "openharmony":
 			return true
 		}
 	}
@@ -1833,14 +1835,14 @@ var broken = map[string]bool{
 
 // List of platforms which are first class ports. See go.dev/issue/38874.
 var firstClass = map[string]bool{
-	"darwin/amd64":  true,
-	"darwin/arm64":  true,
-	"linux/386":     true,
-	"linux/amd64":   true,
-	"linux/arm":     true,
-	"linux/arm64":   true,
-	"windows/386":   true,
-	"windows/amd64": true,
+	"darwin/amd64":      true,
+	"darwin/arm64":      true,
+	"linux/386":         true,
+	"linux/amd64":       true,
+	"linux/arm":         true,
+	"linux/arm64":       true,
+	"windows/386":       true,
+	"windows/amd64":     true,
 	"openharmony/arm64": true,
 }
 
