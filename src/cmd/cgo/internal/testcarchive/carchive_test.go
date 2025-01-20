@@ -33,11 +33,7 @@ import (
 	"unicode"
 )
 
-var globalSkip = func(t testing.TB) {
-	if runtime.IsOpenharmony {
-		t.Skip("openharmony system use musllibc, runtime: c-archive builds fail with musllibc - go.dev/issue/13492")
-	}
-}
+var globalSkip = func(t testing.TB) {}
 
 // Program to run.
 var bin []string
@@ -164,7 +160,7 @@ func testMain(m *testing.M) int {
 			if GOARCH == "arm64" {
 				libbase += "_shared"
 			}
-		case "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "solaris", "illumos":
+		case "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "openharmony", "solaris", "illumos":
 			libbase += "_shared"
 		}
 	}
