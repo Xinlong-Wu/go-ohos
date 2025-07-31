@@ -4688,19 +4688,21 @@ func (c *ctxt7) asmout(p *obj.Prog, out []uint32) (count int) {
 		o2 = c.olsr12u(p, c.opldr(p, AMOVD), 0, REG_R0, p.To.Reg)
 		o3 = uint32((0x244 << 22) | uint32(0)<<10 | uint32(REG_R0&31)<<5 | uint32(REG_R0&31))
 
-		rel := obj.Addrel(c.cursym)
-		rel.Off = int32(c.pc)
-		rel.Siz = 8 //
-		rel.Sym = p.From.Sym
-		rel.Add = 0
-		rel.Type = objabi.R_ARM64_TLS_GD
+		c.cursym.AddRel(c.ctxt, obj.Reloc{
+			Type: objabi.R_ARM64_TLS_GD,
+			Off:  int32(c.pc),
+			Siz:  8,
+			Sym:  p.From.Sym,
+			Add:  0,
+		})
 
-		rel2 := obj.Addrel(c.cursym)
-		rel2.Off = int32(c.pc + 8)
-		rel2.Siz = 4
-		rel2.Sym = p.From.Sym
-		rel2.Add = 0
-		rel2.Type = objabi.R_ARM64_TLS_GD_PAGEOFF12
+		c.cursym.AddRel(c.ctxt, obj.Reloc{
+			Type: objabi.R_ARM64_TLS_GD_PAGEOFF12,
+			Off:  int32(c.pc + 8),
+			Siz:  4,
+			Sym:  p.From.Sym,
+			Add:  0,
+		})
 		if p.From.Offset != 0 {
 			c.ctxt.Diag("invalid offset on MOVW $tlsvar")
 		}
