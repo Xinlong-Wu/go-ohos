@@ -37,28 +37,13 @@ fi
 
 echo "packageName=$packageName"
 
-if [ -d ".git" ]; then
-    echo "going to remove .git"
-    rm -rf .git
-fi
-
-if [ -d "pkg/obj" ]; then
-    echo "going to remove obj"
-    rm -rf pkg/obj
-fi
-
-if [ -d "build" ]; then
-    echo "going to remove build"
-    rm -rf build
-fi
-
 if [ -d "$tag" ]; then
     rm -rf "$tag"
 fi
 mkdir $tag
-mv * $tag/
+cp -r * $tag/
 
-tar -czf $packageName $tag
+tar -czf $packageName $tag --exclude=".git" --exclude="pkg/obj" --exclude="build"
 
 shasum=$(sha256sum $packageName)
 echo "SHA256 Checksum： $shasum"
