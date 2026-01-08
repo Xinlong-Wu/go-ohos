@@ -76,6 +76,7 @@ var (
 	flagMsan          = flag.Bool("msan", false, "enable MSan interface")
 	flagAsan          = flag.Bool("asan", false, "enable ASan interface")
 	flagAslr          = flag.Bool("aslr", true, "enable ASLR for buildmode=c-shared on windows")
+	flagTlsModeGD     = flag.Bool("tlsmodegd", false, "force use of General Dynamic TLS model for buildmode=c-shared")
 
 	flagFieldTrack = flag.String("k", "", "set field tracking `symbol`")
 	flagLibGCC     = flag.String("libgcc", "", "compiler support lib for internal linking; use \"none\" to disable")
@@ -244,6 +245,11 @@ func Main(arch *sys.Arch, theArch Arch) {
 
 	if !*flagAslr && ctxt.BuildMode != BuildModeCShared {
 		Errorf("-aslr=false is only allowed for -buildmode=c-shared")
+		usage()
+	}
+
+	if *flagTlsModeGD && ctxt.BuildMode != BuildModeCShared {
+		Errorf("-tlsmodegd is only allowed for -buildmode=c-shared")
 		usage()
 	}
 

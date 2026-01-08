@@ -126,6 +126,9 @@ Flags:
 	-tmpdir dir
 		Write temporary files to dir.
 		Temporary files are only used in external linking mode.
+	-tlsmodegd
+		Force use of General Dynamic TLS model for buildmode=c-shared.
+		This flag is only valid when building a shared library with -buildmode=c-shared.
 	-v
 		Print trace of linker operations.
 	-w

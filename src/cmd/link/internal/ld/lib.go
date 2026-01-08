@@ -1662,6 +1662,10 @@ func (ctxt *Link) hostlink() {
 				argv = append(argv, "-Wl,-Bsymbolic")
 			}
 		}
+		// If -tlsmodegd is set, force use of General Dynamic TLS model
+		if *flagTlsModeGD {
+			argv = append(argv, "-ftls-model=global-dynamic")
+		}
 	case BuildModeShared:
 		if ctxt.UseRelro() {
 			argv = append(argv, "-Wl,-z,relro")
