@@ -1660,9 +1660,9 @@ func (ctxt *Link) hostlink() {
 				argv = append(argv, "-Wl,-z,nodelete")
 				// Only pass Bsymbolic on non-Windows.
 				argv = append(argv, "-Wl,-Bsymbolic")
-				// If -tlsmodegd is set, force use of General Dynamic TLS model
-				// This is only applicable for ELF-based systems (Linux, etc.)
-				if *flagTlsModeGD {
+				// If -tlsmodegd is set, force use of General Dynamic TLS model.
+				// This is only applicable for ELF-based systems.
+				if *flagTlsModeGD && ctxt.IsELF {
 					argv = append(argv, "-ftls-model=global-dynamic")
 				}
 			}
