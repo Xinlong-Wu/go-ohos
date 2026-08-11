@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: publish-release-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   prepare:
@@ -34,7 +34,7 @@ jobs:
       source_date_epoch: ${{ steps.metadata.outputs.source_date_epoch }}
     steps:
       - name: Check out merged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -126,13 +126,13 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Check out merged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ needs.prepare.outputs.source_commit }}
 
       - name: Install bootstrap Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
           check-latest: true
@@ -156,13 +156,13 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Check out merged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ needs.prepare.outputs.source_commit }}
 
       - name: Install bootstrap Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version: 1.25.x
           check-latest: true
@@ -179,7 +179,7 @@ jobs:
             "$RUNNER_TEMP/release-assets"
 
       - name: Upload release archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.arch }}
           path: ${{ runner.temp }}/release-assets/*
@@ -197,13 +197,13 @@ jobs:
       contents: write
     steps:
       - name: Check out merged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ needs.prepare.outputs.source_commit }}
 
       - name: Download release archives
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-*
           path: dist
