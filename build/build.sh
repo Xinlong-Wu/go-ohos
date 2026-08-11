@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 tag="default"
 
@@ -29,17 +29,17 @@ parse_args() {
 
 build_package() {
   parse_args "$@"
-  export tag=$tag
+  export tag="$tag"
   echo "Building build_package tag:${tag}..."
-  sh ./build/ohos_release/build.sh || error_exit "build_package failed!"
+  bash ./build/ohos_release/build.sh || error_exit "build_package failed!"
   echo "build_package succeeded!"
 }
 
 build_and_test() {
   parse_args "$@"
-  export run_ohos=$run_ohos
+  export run_ohos="$run_ohos"
   echo "Building and running build_and_test ..."
-  sh ./build/build_and_test/build.sh || error_exit "build_and_test failed!"
+  bash ./build/build_and_test/build.sh || error_exit "build_and_test failed!"
   echo "build_and_test succeeded!"
 }
 

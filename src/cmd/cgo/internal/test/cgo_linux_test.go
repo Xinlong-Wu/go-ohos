@@ -7,6 +7,7 @@
 package cgotest
 
 import (
+	"os"
 	"runtime"
 	"testing"
 )

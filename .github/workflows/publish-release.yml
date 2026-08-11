@@ -1,0 +1,289 @@
+name: Publish OpenHarmony Go release
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - .github/release.json
+      - .github/workflows/publish-release.yml
+  push:
+    branches:
+      - master
+    paths:
+      - .github/release.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    outputs:
+      upstream_tag: ${{ steps.metadata.outputs.upstream_tag }}
+      release_tag: ${{ steps.metadata.outputs.release_tag }}
+      prerelease: ${{ steps.metadata.outputs.prerelease }}
+      revision: ${{ steps.metadata.outputs.revision }}
+      source_commit: ${{ steps.metadata.outputs.source_commit }}
+      source_date_epoch: ${{ steps.metadata.outputs.source_date_epoch }}
+    steps:
+      - name: Check out merged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate release metadata
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          manifest=.github/release.json
+          IFS=$'\t' read -r upstream_tag release_tag prerelease < <(
+            python3 - "$manifest" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as release_file:
+              metadata = json.load(release_file)
+
+          upstream_tag = metadata.get("upstream_tag")
+          release_tag = metadata.get("release_tag")
+          prerelease = metadata.get("prerelease")
+          if not isinstance(upstream_tag, str) or not upstream_tag:
+              raise SystemExit("upstream_tag must be a non-empty string")
+          if not isinstance(release_tag, str) or not release_tag:
+              raise SystemExit("release_tag must be a non-empty string")
+          if not isinstance(prerelease, bool):
+              raise SystemExit("prerelease must be a boolean")
+
+          print(upstream_tag, release_tag, str(prerelease).lower(), sep="\t")
+          PY
+          )
+
+          if [[ ! "$upstream_tag" =~ ^go[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Only stable upstream Go tags are supported: $upstream_tag" >&2
+            exit 1
+          fi
+
+          prefix="${upstream_tag}-ohos."
+          if [[ "$release_tag" != "$prefix"* ]]; then
+            echo "Release tag must start with $prefix" >&2
+            exit 1
+          fi
+          revision="${release_tag#"$prefix"}"
+          if [[ ! "$revision" =~ ^[1-9][0-9]*$ ]]; then
+            echo "OpenHarmony release revision must be a positive integer." >&2
+            exit 1
+          fi
+
+          source_commit="$(git log -1 --first-parent --format=%H -- "$manifest")"
+          if [[ -z "$source_commit" ]]; then
+            echo "Cannot find the commit that last changed $manifest." >&2
+            exit 1
+          fi
+
+          version="$(git show "$source_commit:VERSION" | sed -n '1p')"
+          if [[ "$version" != "$upstream_tag" ]]; then
+            echo "VERSION contains $version, expected $upstream_tag." >&2
+            exit 1
+          fi
+
+          git fetch --no-tags https://github.com/golang/go.git "refs/tags/$upstream_tag"
+          upstream_commit="$(git rev-parse 'FETCH_HEAD^{commit}')"
+          if ! git merge-base --is-ancestor "$upstream_commit" "$source_commit"; then
+            echo "$upstream_tag ($upstream_commit) is not an ancestor of $source_commit." >&2
+            exit 1
+          fi
+
+          source_date_epoch="$(git show -s --format=%ct "$source_commit")"
+          {
+            echo "upstream_tag=$upstream_tag"
+            echo "release_tag=$release_tag"
+            echo "prerelease=$prerelease"
+            echo "revision=$revision"
+            echo "source_commit=$source_commit"
+            echo "source_date_epoch=$source_date_epoch"
+          } >>"$GITHUB_OUTPUT"
+
+          {
+            echo "### Release metadata"
+            echo
+            echo "- Upstream tag: \`$upstream_tag\`"
+            echo "- OpenHarmony tag: \`$release_tag\`"
+            echo "- Source commit: \`$source_commit\`"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+  test:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out merged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.prepare.outputs.source_commit }}
+
+      - name: Install bootstrap Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.25.x
+          check-latest: true
+          cache: false
+
+      - name: Run toolchain tests
+        shell: bash
+        run: bash build/release/test.sh
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - name: Check out merged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.prepare.outputs.source_commit }}
+
+      - name: Install bootstrap Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.25.x
+          check-latest: true
+          cache: false
+
+      - name: Build release archive
+        shell: bash
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+          SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
+        run: |
+          bash build/ohos_release/build.sh \
+            "${{ needs.prepare.outputs.release_tag }}" \
+            "$RUNNER_TEMP/release-assets"
+
+      - name: Upload release archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.arch }}
+          path: ${{ runner.temp }}/release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: github.event_name != 'pull_request'
+    needs:
+      - prepare
+      - test
+      - build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out merged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.prepare.outputs.source_commit }}
+
+      - name: Download release archives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Verify release archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          checksums=(dist/*.sha256)
+          if (( ${#checksums[@]} != 2 )); then
+            echo "Expected two checksum files, found ${#checksums[@]}." >&2
+            exit 1
+          fi
+          for checksum in "${checksums[@]}"; do
+            (
+              cd dist
+              sha256sum -c "$(basename "$checksum")"
+            )
+          done
+
+      - name: Create tag and GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+          UPSTREAM_TAG: ${{ needs.prepare.outputs.upstream_tag }}
+          OHOS_REVISION: ${{ needs.prepare.outputs.revision }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+          SOURCE_COMMIT: ${{ needs.prepare.outputs.source_commit }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG" 2>/dev/null || true
+          if git rev-parse --verify --quiet "refs/tags/$RELEASE_TAG^{commit}" >/dev/null; then
+            tagged_commit="$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+            if [[ "$tagged_commit" != "$SOURCE_COMMIT" ]]; then
+              echo "$RELEASE_TAG already points to $tagged_commit, not $SOURCE_COMMIT." >&2
+              exit 1
+            fi
+          else
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git tag -a "$RELEASE_TAG" "$SOURCE_COMMIT" \
+              -m "OpenHarmony Go release $RELEASE_TAG"
+            git push origin "refs/tags/$RELEASE_TAG"
+          fi
+
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GitHub Release $RELEASE_TAG already exists."
+            exit 0
+          fi
+
+          notes_file="$RUNNER_TEMP/release-notes.md"
+          cat >"$notes_file" <<EOF
+          OpenHarmony Go toolchain based on upstream $UPSTREAM_TAG.
+
+          - Upstream source: https://github.com/golang/go/tree/$UPSTREAM_TAG
+          - OpenHarmony source commit: https://github.com/$GITHUB_REPOSITORY/commit/$SOURCE_COMMIT
+          - OpenHarmony revision: ohos.$OHOS_REVISION
+          - Validation: short standard-library tests, targeted toolchain tests,
+            compile-only checks, and amd64/arm64 release builds
+
+          This release was published automatically after its release PR was
+          manually merged into the master branch.
+          EOF
+
+          shopt -s nullglob
+          assets=(dist/*)
+          release_args=(
+            release create "$RELEASE_TAG"
+            "${assets[@]}"
+            --repo "$GITHUB_REPOSITORY"
+            --title "Go ${UPSTREAM_TAG#go} for OpenHarmony (ohos.$OHOS_REVISION)"
+            --notes-file "$notes_file"
+          )
+          if [[ "$PRERELEASE" == "true" ]]; then
+            release_args+=(--prerelease)
+          else
+            release_args+=(--latest)
+          fi
+          gh "${release_args[@]}"
