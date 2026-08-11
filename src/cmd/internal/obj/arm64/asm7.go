@@ -876,6 +876,7 @@ var optab = []Optab{
 	{ATLBI, C_SPOP, C_NONE, C_NONE, C_NONE, C_NONE, 107, 4, 0, 0, 0},
 	{ATLBI, C_SPOP, C_NONE, C_NONE, C_ZREG, C_NONE, 107, 4, 0, 0, 0},
 	{ABTI, C_NONE, C_NONE, C_NONE, C_NONE, C_NONE, 108, 4, 0, 0, 0},
+	{ABTI, C_SPOP, C_NONE, C_NONE, C_NONE, C_NONE, 108, 4, 0, 0, 0},
 
 	/* encryption instructions */
 	{AAESD, C_VREG, C_NONE, C_NONE, C_VREG, C_NONE, 26, 4, 0, 0, 0}, // for compatibility with old code

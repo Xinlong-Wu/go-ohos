@@ -6,6 +6,7 @@ package user
 
 import (
 	"os"
+	"runtime"
 	"slices"
 	"testing"
 )
