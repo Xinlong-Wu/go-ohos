@@ -15,6 +15,7 @@ package url
 // Unit tests should also contain references to issue numbers with details.
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"internal/godebug"
@@ -836,6 +837,13 @@ func (u *URL) String() string {
 			}
 		}
 		path := u.EscapedPath()
+		if u.OmitHost && u.Host == "" && u.User == nil && strings.HasPrefix(path, "//") {
+			// Escape the first / in a path starting with "//" and no authority
+			// so that re-parsing the URL doesn't turn the path into an authority
+			// (e.g., Path="//host/p" producing "http://host/p").
+			buf.WriteString("%2F")
+			path = path[1:]
+		}
 		if path != "" && path[0] != '/' && u.Host != "" {
 			buf.WriteByte('/')
 		}
@@ -916,6 +924,19 @@ func (v Values) Del(key string) {
 func (v Values) Has(key string) bool {
 	_, ok := v[key]
 	return ok
+}
+
+// Clone creates a deep copy of the subject [Values].
+func (vs Values) Clone() Values {
+	if vs == nil {
+		return nil
+	}
+
+	newVals := make(Values, len(vs))
+	for k, v := range vs {
+		newVals[k] = slices.Clone(v)
+	}
+	return newVals
 }
 
 // ParseQuery parses the URL-encoded query string and returns
@@ -1036,54 +1057,43 @@ func resolvePath(base, ref string) string {
 		return ""
 	}
 
-	var (
-		elem string
-		dst  strings.Builder
-	)
-	first := true
+	dst := make([]byte, 0, len(full)+1)
+	dst = append(dst, '/')
+	elem := ""
 	remaining := full
-	// We want to return a leading '/', so write it now.
-	dst.WriteByte('/')
 	found := true
+	first := true
 	for found {
 		elem, remaining, found = strings.Cut(remaining, "/")
-		if elem == "." {
+		switch elem {
+		case ".":
 			first = false
-			// drop
 			continue
-		}
-
-		if elem == ".." {
-			// Ignore the leading '/' we already wrote.
-			str := dst.String()[1:]
-			index := strings.LastIndexByte(str, '/')
-
-			dst.Reset()
-			dst.WriteByte('/')
-			if index == -1 {
-				first = true
+		case "..":
+			if i := bytes.LastIndexByte(dst[1:], '/'); i >= 0 {
+				dst = dst[:i+1]
 			} else {
-				dst.WriteString(str[:index])
+				dst = dst[:1]
 			}
-		} else {
+			first = len(dst) == 1
+		default:
 			if !first {
-				dst.WriteByte('/')
+				dst = append(dst, '/')
 			}
-			dst.WriteString(elem)
+			dst = append(dst, elem...)
 			first = false
 		}
 	}
 
 	if elem == "." || elem == ".." {
-		dst.WriteByte('/')
+		dst = append(dst, '/')
 	}
 
 	// We wrote an initial '/', but we don't want two.
-	r := dst.String()
-	if len(r) > 1 && r[1] == '/' {
-		r = r[1:]
+	if len(dst) > 1 && dst[1] == '/' {
+		return string(dst[1:])
 	}
-	return r
+	return string(dst)
 }
 
 // IsAbs reports whether the [URL] is absolute.
@@ -1327,4 +1337,17 @@ func JoinPath(base string, elem ...string) (result string, err error) {
 		return "", err
 	}
 	return res.String(), nil
+}
+
+// Clone creates a deep copy of the fields of the subject [URL].
+func (u *URL) Clone() *URL {
+	if u == nil {
+		return nil
+	}
+
+	uc := new(*u)
+	if u.User != nil {
+		uc.User = new(*u.User)
+	}
+	return uc
 }

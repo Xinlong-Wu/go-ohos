@@ -51,6 +51,7 @@ func main() {
 	ctxt.Debugpcln = flags.DebugFlags.PCTab
 	ctxt.IsAsm = true
 	ctxt.Pkgpath = *flags.Importpath
+	ctxt.Std = *flags.Std
 	ctxt.DwTextCount = objabi.DummyDwarfFunctionCountForAssembler()
 	switch *flags.Spectre {
 	default:

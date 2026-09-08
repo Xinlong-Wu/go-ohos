@@ -93,6 +93,18 @@ func makefs(t *testing.T, fs []string) string {
 	return root
 }
 
+// hasLink reports whether the test filesystem layout fs
+// contains at least a single symlink.
+func hasLink(fs []string) bool {
+	for _, ent := range fs {
+		isLink := strings.Contains(ent, " => ")
+		if isLink {
+			return true
+		}
+	}
+	return false
+}
+
 // A rootTest is a test case for os.Root.
 type rootTest struct {
 	name string
@@ -130,6 +142,9 @@ type rootTest struct {
 // run sets up the test filesystem layout, os.OpenDirs the root, and calls f.
 func (test *rootTest) run(t *testing.T, f func(t *testing.T, target string, d *os.Root)) {
 	t.Run(test.name, func(t *testing.T) {
+		if hasLink(test.fs) {
+			testenv.MustHaveSymlink(t)
+		}
 		root := makefs(t, test.fs)
 		d, err := os.OpenRoot(root)
 		if err != nil {
@@ -570,6 +585,11 @@ func TestRootMkdir(t *testing.T) {
 
 func TestRootMkdirAll(t *testing.T) {
 	for _, test := range rootTestCases {
+		if test.name == "directory does not exist" {
+			// Test expects error, mkdirall creates the missing directory.
+			// TestRootMultiMkdirAll covers this case better anyway, just skip.
+			continue
+		}
 		test.run(t, func(t *testing.T, target string, root *os.Root) {
 			wantError := test.wantError
 			if test.ltarget != "" {
@@ -578,7 +598,7 @@ func TestRootMkdirAll(t *testing.T) {
 				wantError = true
 			}
 
-			err := root.Mkdir(test.open, 0o777)
+			err := root.MkdirAll(test.open, 0o777)
 			if errEndsTest(t, err, wantError, "root.MkdirAll(%q)", test.open) {
 				return
 			}
@@ -1248,15 +1268,7 @@ var rootConsistencyTestCases = []rootConsistencyTest{{
 }}
 
 func tempDirWithUnixSocket(t *testing.T, name string) string {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if err := os.RemoveAll(dir); err != nil {
-			t.Error(err)
-		}
-	})
+	dir := t.TempDir()
 	addr, err := net.ResolveUnixAddr("unix", filepath.Join(dir, name))
 	if err != nil {
 		t.Skipf("net.ResolveUnixAddr: %v", err)
@@ -1282,6 +1294,10 @@ func (test rootConsistencyTest) run(t *testing.T, f func(t *testing.T, path stri
 	t.Run(test.name, func(t *testing.T) {
 		if test.check != nil {
 			test.check(t)
+		}
+
+		if hasLink(test.fs) {
+			testenv.MustHaveSymlink(t)
 		}
 
 		dir1 := makefs(t, test.fs)
@@ -1870,6 +1886,7 @@ func TestRootRaceRenameDir(t *testing.T) {
 }
 
 func TestRootSymlinkToRoot(t *testing.T) {
+	testenv.MustHaveSymlink(t)
 	dir := makefs(t, []string{
 		"d/d => ..",
 	})
@@ -1897,6 +1914,7 @@ func TestRootSymlinkToRoot(t *testing.T) {
 }
 
 func TestOpenInRoot(t *testing.T) {
+	testenv.MustHaveSymlink(t)
 	dir := makefs(t, []string{
 		"file",
 		"link => ../ROOT/file",
@@ -3120,6 +3138,52 @@ func TestRootMultiMkdir(t *testing.T) {
 	})
 }
 
+func TestRootMultiMkdirAllShallow(t *testing.T) {
+	runRootMultiTest(t, func(t *testing.T, test *rootMultiTest) (string, error) {
+		return testRootMultiMkdirAll(t, test, test.targetPath)
+	})
+}
+
+func TestRootMultiMkdirAllDeep(t *testing.T) {
+	runRootMultiTest(t, func(t *testing.T, test *rootMultiTest) (string, error) {
+		targetPath := test.targetPath
+		if len(targetPath) > 0 && os.IsPathSeparator(targetPath[len(targetPath)-1]) {
+			targetPath += "a/b/"
+		} else {
+			targetPath += "/a/b"
+		}
+		return testRootMultiMkdirAll(t, test, targetPath)
+	})
+}
+
+func testRootMultiMkdirAll(t *testing.T, test *rootMultiTest, targetPath string) (string, error) {
+	var mkdirAll = os.MkdirAll
+	if test.root != nil {
+		mkdirAll = test.root.MkdirAll
+	}
+
+	test.setOp("MkdirAll(%q, 0o777)", targetPath)
+	gotErr := mkdirAll(targetPath, 0o777)
+
+	switch {
+	case test.root != nil && test.target.lescapes():
+		// "mkdir ../target", or equivalent escaping path.
+		test.wantError(t, gotErr, os.ErrPathEscapes)
+	case test.root != nil && test.target.escapes():
+		// "mkdir ../target", or equivalent escaping path.
+		test.wantError(t, gotErr, errAny)
+		return "", errSkipRootConsistencyCheck
+	case test.root != nil && test.target.kind == testFileSymlink && test.target.target.kind == testFileAbsent && targetPath != test.targetPath:
+		// A minor inconsistency between Root.MkdirAll and os.MkdirAll:
+		// When an intermediate component of the tree being constructed is a
+		// dangling symlink, Root.MkdirAll will follow the symlink and create
+		// its target directory, while os.MkdirAll will fail with an error.
+		return "", errSkipRootConsistencyCheck
+	default:
+	}
+	return "", gotErr
+}
+
 func TestRootMultiRename(t *testing.T) {
 	if runtime.GOOS == "wasip1" {
 		switch os.Getenv("GOWASIRUNTIME") {
@@ -3215,6 +3279,10 @@ func TestRootMultiReadFile(t *testing.T) {
 		case runtime.GOOS == "plan9":
 			// Plan9 lets you read from directories.
 			// Just rely on consistency checks.
+		case runtime.GOOS == "netbsd":
+			// See https://go.dev/issue/80322:
+			// NetBSD builder appears to be succeeding on read-from-dir as well.
+			return "", gotErr
 		case test.target.finalKind() == testFileDir:
 			test.wantError(t, gotErr, errAny)
 		case test.target.anySlashSuffix():

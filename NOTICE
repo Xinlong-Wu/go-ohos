@@ -8,10 +8,10 @@ THE OPEN SOURCE SOFTWARE IN THIS PRODUCT IS DISTRIBUTED IN THE HOPE THAT IT WILL
 Copyright Notice and License Texts
 ----------------------------------------------------------------------
 
-Software: golang/go 1.22.10
+Software: golang/go 1.27.1
 
 Copyright notice:
-Copyright The Go Authors 
+Copyright The Go Authors
 License: BSD-3-Clause license
 
 Redistribution and use in source and binary forms, with or without

@@ -12,6 +12,7 @@ import (
 	"internal/goos"
 	"internal/runtime/atomic"
 	"internal/runtime/gc"
+	"internal/runtime/maps"
 	"internal/runtime/sys"
 	"unsafe"
 )
@@ -211,7 +212,7 @@ var (
 	IfaceHash  = ifaceHash
 )
 
-var UseAeshash = &useAeshash
+var UseAeshash = &maps.UseAeshash
 
 func MemclrBytes(b []byte) {
 	s := (*slice)(unsafe.Pointer(&b))
@@ -254,7 +255,6 @@ func SetTracebackEnv(level string) {
 	traceback_env = traceback_cache
 }
 
-var ReadUnaligned32 = readUnaligned32
 var ReadUnaligned64 = readUnaligned64
 
 func CountPagesInUse() (pagesInUse, counted uintptr) {
@@ -273,6 +273,10 @@ func CountPagesInUse() (pagesInUse, counted uintptr) {
 	return
 }
 
+func Blocksampled(cycles, rate int64) bool { return blocksampled(cycles, rate) }
+
+func Cheaprand() uint32         { return cheaprand() }
+func Cheaprand64() int64        { return cheaprand64() }
 func Fastrand() uint32          { return uint32(rand()) }
 func Fastrand64() uint64        { return rand() }
 func Fastrandn(n uint32) uint32 { return randn(n) }
@@ -447,6 +451,16 @@ func ShrinkStackAndVerifyFramePointers() {
 	// If our new stack contains frame pointers into the old stack, this will
 	// crash because the old stack has been poisoned.
 	FPCallers(make([]uintptr, 1024))
+}
+
+type StackPoisonCopyRestore int
+
+func (s StackPoisonCopyRestore) Restore() { stackPoisonCopy = int(s) }
+
+func StackPoisonCopy() StackPoisonCopyRestore {
+	before := stackPoisonCopy
+	stackPoisonCopy = 1
+	return StackPoisonCopyRestore(before)
 }
 
 // BlockOnSystemStack switches to the system stack, prints "x\n" to
@@ -1477,7 +1491,7 @@ func (c *GCController) Revise(d GCControllerReviseDelta) {
 
 func (c *GCController) EndCycle(bytesMarked uint64, assistTime, elapsed int64, gomaxprocs int) {
 	c.assistTime.Store(assistTime)
-	c.endCycle(elapsed, gomaxprocs, false)
+	c.endCycle(elapsed, gomaxprocs)
 	c.resetLive(bytesMarked)
 	c.commit(false)
 }
@@ -2105,3 +2119,16 @@ var (
 	Complex128Bytes = complex128Bytes
 	Complex64Bytes  = complex64Bytes
 )
+
+func GetScanAlloc() uintptr {
+	c := getMCache(getg().m)
+	return c.scanAlloc
+}
+
+func MallocGC(size uintptr, typ *abi.Type, needzero bool) unsafe.Pointer {
+	return mallocgc(size, typ, needzero)
+}
+
+func FuncNamePiecesForPrint(name string) (string, string, string, string, string) {
+	return funcNamePiecesForPrint(name)
+}
