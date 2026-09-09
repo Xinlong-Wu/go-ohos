@@ -53,7 +53,7 @@ TEXT runtime·save_g(SB),NOSPLIT,$0
 	MOVD	g, (R0)(R27)
 #else
 	// Musl/Linux TLS GD 逻辑
-	MOVD	R0, R27 
+	MOVD	R0, R27
     MOVD	runtime·tls_g(SB), R1
 	CALL	(R1)
     MOVD	g, (R27)(R0)

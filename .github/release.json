@@ -1,5 +1,5 @@
 {
-  "upstream_tag": "go1.26.8",
-  "release_tag": "go1.26.8-ohos.1",
+  "upstream_tag": "go1.27.1",
+  "release_tag": "go1.27.1-ohos.1",
   "prerelease": false
 }

@@ -61,4 +61,3 @@ DATA _rt0_arm64_openharmony_lib_argc<>(SB)/8, $0
 GLOBL _rt0_arm64_openharmony_lib_argc<>(SB),NOPTR, $8
 DATA _rt0_arm64_openharmony_lib_argv<>(SB)/8, $0
 GLOBL _rt0_arm64_openharmony_lib_argv<>(SB),NOPTR, $8
-
