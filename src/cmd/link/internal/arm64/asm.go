@@ -578,7 +578,13 @@ func elfreloc1(ctxt *ld.Link, out *ld.OutBuf, ldr *loader.Loader, s loader.Sym, 
 		if siz != 4 {
 			return false
 		}
+		// The ADD is followed by BLR x1 in the TLS descriptor sequence.
+		// Emit the hint relocation for that call as well; lld uses it to
+		// relax the complete GD sequence (including BLR) for local symbols.
 		out.Write64(uint64(elf.R_AARCH64_TLSDESC_ADD_LO12_NC) | uint64(elfsym)<<32)
+		out.Write64(uint64(r.Xadd))
+		out.Write64(uint64(sectoff + 4))
+		out.Write64(uint64(elf.R_AARCH64_TLSDESC_CALL) | uint64(elfsym)<<32)
 	case objabi.R_ARM64_GOTPCREL:
 		out.Write64(uint64(elf.R_AARCH64_ADR_GOT_PAGE) | uint64(elfsym)<<32)
 		out.Write64(uint64(r.Xadd))
@@ -889,7 +895,7 @@ func archreloc(target *ld.Target, ldr *loader.Loader, syms *ld.ArchSyms, r loade
 			nExtReloc = 2 // need two ELF relocations. see elfreloc1
 			return val, nExtReloc, isOk
 		case objabi.R_ARM64_TLS_GD_PAGEOFF12:
-			nExtReloc = 1 // 只要一处重定位，需要与elfreloc1里边声明的重定位个数一致
+			nExtReloc = 2 // ADD plus the TLSDESC_CALL hint relocation
 			return val, nExtReloc, isOk
 		case objabi.R_ARM64_TLS_GD:
 			nExtReloc = 2 // need two ELF relocations. see elfreloc1. 不可使用该外部extreloc
