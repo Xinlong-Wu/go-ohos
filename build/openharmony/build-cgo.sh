@@ -134,14 +134,18 @@ if ! grep -Eq 'R_AARCH64_(TLSDESC|TLSGD)|__emutls_' "$output_dir/openharmony-cgo
   exit 1
 fi
 
-machine="$($readelf_cmd -h "$binary" | sed -n 's/^ *Machine: *//p' | head -n 1)"
+header_file="$output_dir/openharmony-cgo-smoke.header"
+program_headers_file="$output_dir/openharmony-cgo-smoke.program-headers"
+"$readelf_cmd" -h "$binary" > "$header_file"
+machine="$(sed -n 's/^ *Machine: *//p' "$header_file" | sed -n '1p')"
 if [[ "$machine" != *AArch64* ]]; then
   echo "Unexpected cgo binary machine: $machine" >&2
   exit 1
 fi
-if ! "$readelf_cmd" -l "$binary" | grep -Fq '/lib/ld-musl-aarch64.so.1'; then
+"$readelf_cmd" -l "$binary" > "$program_headers_file"
+if ! grep -Fq '/lib/ld-musl-aarch64.so.1' "$program_headers_file"; then
   echo "OpenHarmony cgo binary does not use the musl loader." >&2
-  "$readelf_cmd" -l "$binary" >&2 || true
+  cat "$program_headers_file" >&2
   exit 1
 fi
 "$readelf_cmd" -r "$binary" > "$output_dir/openharmony-cgo-smoke.relocations"
