@@ -65,7 +65,10 @@ bash build/openharmony/test-runtime.sh \
 The runtime smoke binary checks the port identity (`runtime.IsOpenharmony`),
 goroutines and atomics, GC, timers, temporary files, signals, loopback TCP,
 HTTP/TLS, crypto randomness, and subprocess execution. The cgo binary checks
-C calls, errno, C TLS, pthread creation, and a C-to-Go callback.
+C calls, errno, C TLS, pthread creation, and a C-to-Go callback. `build-cgo.sh`
+also records the relocatable C object and its AArch64 TLS relocations; a final
+executable may legally have that relocation relaxed by the linker, so the
+object is the portable code-generation check.
 
 OpenHarmony target binaries intentionally report the compatible `linux` value
 for `runtime.GOOS`; `runtime.IsOpenharmony` is the authoritative port marker.

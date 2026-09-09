@@ -1,7 +1,9 @@
 #include <errno.h>
 #include <pthread.h>
 
-static __thread int tls_value;
+/* Keep the symbol externally visible so the compiler cannot fold it into a
+ * local-exec reference before emitting the requested general-dynamic model. */
+__thread __attribute__((visibility("default"))) int tls_value;
 
 int ohos_add(int a, int b) {
 	return a + b;
