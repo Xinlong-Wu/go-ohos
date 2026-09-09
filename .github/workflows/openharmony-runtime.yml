@@ -1,0 +1,135 @@
+name: OpenHarmony runtime tests
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - .github/workflows/openharmony-runtime.yml
+      - .github/workflows/publish-release.yml
+      - build/openharmony/**
+      - build/release/test.sh
+      - src/**
+      - test/**
+      - VERSION
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openharmony-runtime-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cgo-build:
+    name: Build OpenHarmony cgo smoke bundle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install bootstrap Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: 1.25.x
+          check-latest: true
+          cache: false
+
+      - name: Build the host toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd src
+            bash ./make.bash -v
+          )
+
+      - name: Set up OpenHarmony 7.0 SDK
+        uses: openharmony-rs/setup-ohos-sdk@bd7155a335273ce736c57cb51f7172935b8b5a94
+        with:
+          version: '7.0'
+          components: native
+          cache: true
+          mirror: true
+
+      - name: Validate OpenHarmony SDK compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x "$OHOS_SDK_NATIVE/llvm/bin/clang"
+          test -d "$OHOS_SDK_NATIVE/sysroot"
+          "$OHOS_SDK_NATIVE/llvm/bin/clang" \
+            --target=aarch64-linux-ohos \
+            --sysroot="$OHOS_SDK_NATIVE/sysroot" \
+            -print-effective-triple
+
+      - name: Build OpenHarmony cgo smoke bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash build/openharmony/build-cgo.sh \
+            --goroot "$GITHUB_WORKSPACE" \
+            --sdk "$OHOS_SDK_NATIVE" \
+            --output "$RUNNER_TEMP/openharmony-cgo-assets"
+
+      - name: Upload OpenHarmony cgo smoke bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: openharmony-cgo-smoke
+          path: ${{ runner.temp }}/openharmony-cgo-assets/*
+          if-no-files-found: error
+          retention-days: 7
+
+  runtime:
+    name: Execute OpenHarmony userland tests
+    needs: cgo-build
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install bootstrap Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: 1.25.x
+          check-latest: true
+          cache: false
+
+      - name: Build the arm64 host toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd src
+            bash ./make.bash -v
+          )
+
+      - name: Download OpenHarmony cgo smoke bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: openharmony-cgo-smoke
+          path: ${{ runner.temp }}/openharmony-cgo-assets
+
+      - name: Run OpenHarmony userland tests
+        shell: bash
+        env:
+          OPENHARMONY_DOCKER_TIMEOUT_SECONDS: '300'
+        run: |
+          set -euo pipefail
+          cgo_binary="$RUNNER_TEMP/openharmony-cgo-assets/openharmony-cgo-smoke"
+          test -f "$cgo_binary"
+          # Artifact downloads do not reliably preserve executable bits.
+          chmod +x "$cgo_binary"
+          test -x "$cgo_binary"
+          bash build/openharmony/test-runtime.sh \
+            --repo "$GITHUB_WORKSPACE" \
+            --goroot "$GITHUB_WORKSPACE" \
+            --cgo-binary "$cgo_binary" \
+            --go-test-packages sync
