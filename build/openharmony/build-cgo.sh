@@ -94,7 +94,10 @@ echo "Using OpenHarmony compiler: $CC"
 echo "==> build OpenHarmony cgo smoke binary"
 (
   cd "$script_dir/testdata/cgo"
-  GO111MODULE=off "$go_cmd" build -trimpath -tlsmodegd \
+  # PIE makes the Go assembler select the TLS-GD sequence for runtime.tls_g;
+  # a non-PIE executable would select the local-exec form and cannot call the
+  # musl TLS descriptor resolver used by the OpenHarmony port.
+  GO111MODULE=off "$go_cmd" build -trimpath -buildmode=pie -tlsmodegd \
     -ldflags='-linkmode=external -extldflags=-Wl,-dynamic-linker,/lib/ld-musl-aarch64.so.1' \
     -o "$binary" .
 )
