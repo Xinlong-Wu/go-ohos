@@ -1,47 +1,82 @@
-# Scheduled upstream synchronization
+# Scheduled upstream release synchronization
 
-The `Sync upstream development branch` workflow periodically prepares a pull
-request from the Go development branch into this fork.
+The `Sync upstream stable release` workflow periodically checks the official
+Go repository for a newer stable release and prepares one release pull request
+for this fork.
 
-## Schedule and branches
+## Release selection and branch naming
 
 - Workflow: `.github/workflows/sync-upstream.yml`
-- Upstream source: `golang/go:master`
+- Upstream source: stable `goX.Y.Z` tags in `golang/go`
+- Excluded sources: `master`, untagged release branches, beta tags, and RC tags
 - Downstream target: `Xinlong-Wu/go-ohos:master`
 - Schedule: 03:17 UTC on every third calendar day of the month
-- Sync branch: `sync/upstream-YYYY-MM-DD`, using the UTC run date
+- Release branch: `release/<upstream-tag>-ohos.1`, for example
+  `release/go1.27.2-ohos.1`
 
 GitHub Actions cron syntax cannot express a persistent 72-hour interval across
 month boundaries. The configured calendar schedule is the closest native
-three-day schedule. `workflow_dispatch` is available for an immediate manual
-run.
+three-day schedule. `workflow_dispatch` is available for an immediate check.
 
-The sync branch points directly at the selected upstream commit. It is not an
-automatically conflict-resolved merge commit. This allows the workflow to open
-the pull request even when upstream and the OpenHarmony port modify the same
-files, without silently choosing either side. Conflicts, compatibility work,
-tests, and the final merge remain manual.
+The workflow lists this fork's existing `goX.Y.Z-ohos.N` tags to determine the
+latest upstream version already released. It then selects the numerically
+latest official stable upstream tag. A new branch is created only when the
+upstream tag is newer.
 
-The workflow skips creating a pull request when:
+This repository has one `master` release line, so maintenance releases from an
+older Go series are not prepared after `master` has advanced to a newer series.
+Supporting multiple Go series concurrently requires a downstream maintenance
+branch and publication workflow per series.
 
-- `master` already contains the current upstream commit;
-- another sync PR already points at the same upstream commit; or
-- a same-day sync PR was manually closed or merged.
+Only one `release/go*` pull request may be open at a time. A later release is
+prepared only after the earlier PR has been merged or closed, so every release
+integrates with the current downstream state.
 
-A same-day rerun may update its remote branch only when the existing branch is
-still an ancestor of the current upstream branch. It refuses to overwrite a
-branch containing manual conflict-resolution commits. The workflow never
-enables auto-merge.
+## Manual conflict resolution
+
+The generated branch points directly at the exact upstream stable-tag commit.
+It contains no automatically chosen `ours` or `theirs` conflict resolutions
+and no generated metadata file. The release version is encoded entirely in the
+branch name.
+
+Resolve conflicts while preserving the OpenHarmony port, then merge with
+**Create a merge commit**. Squash and rebase merges are rejected by the release
+gate because they do not preserve the official upstream tag as an ancestor of
+the released source. Auto-merge is never enabled.
+
+The workflow does not overwrite an existing release branch. If a run pushed
+the upstream commit but failed before opening its PR, a later run may reuse the
+branch only while it still points exactly at that commit. Any other branch tip
+is treated as possible manual conflict-resolution work and left untouched.
+
+## Automatic publication after the manual merge
+
+`.github/workflows/publish-release.yml` recognizes source branches matching
+`release/goX.Y.Z-ohos.N`:
+
+1. It parses the upstream and OpenHarmony tags from the branch name.
+2. On PR updates, it validates and builds the synthetic merge result without
+   publishing.
+3. On a manually merged PR, it uses the actual merge commit supplied by the
+   `pull_request.closed` event.
+4. After validating the merge method, `VERSION`, upstream ancestry, and
+   containment in `master`, it tests and builds both architectures, creates the
+   annotated tag, and publishes the GitHub Release.
+
+There is no release-manifest conflict to resolve. The only recurring manual
+actions are resolving source conflicts, reviewing the checks, and creating the
+merge commit.
 
 ## Authentication
 
-By default the workflow uses `GITHUB_TOKEN` with `contents: write` and
-`pull-requests: write`. The repository must allow GitHub Actions to create
-pull requests.
+By default the synchronization workflow uses `GITHUB_TOKEN` with
+`contents: write` and `pull-requests: write`. The repository must allow GitHub
+Actions to create pull requests.
 
-Pull requests created with `GITHUB_TOKEN` do not trigger another workflow run
-from their `pull_request` event. To have the normal PR checks start
-automatically, configure an optional repository secret named
-`UPSTREAM_SYNC_TOKEN`. Use a fine-grained token restricted to this repository
-with Contents and Pull requests read/write permissions. The workflow uses
-that token for checkout, branch push, and PR creation when it is present.
+GitHub suppresses `pull_request` workflow runs caused by a PR created with
+`GITHUB_TOKEN`. Configure the optional repository secret `UPSTREAM_SYNC_TOKEN`
+so pre-merge release checks start immediately for a conflict-free PR. Use a
+fine-grained token restricted to this repository with Contents and Pull
+requests read/write permissions. A human-authored conflict-resolution push also
+starts the checks. The merged-PR publication event is caused by the user's
+manual merge and does not depend on the optional token.
