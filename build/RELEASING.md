@@ -24,9 +24,17 @@ changing the upstream Go version.
 Changing `.github/release.json` on `master` starts the release workflow. The
 workflow verifies that the upstream tag exists, is an ancestor of the merged
 commit, and matches `VERSION`. It then repeats short standard-library tests,
-targeted toolchain tests, and compile-only checks on the merged commit; builds
+targeted toolchain tests, OpenHarmony cross-compilation checks, and
+DockerHarmony OpenHarmony userland runtime checks on the merged commit; builds
 amd64 and arm64 archives; checks their SHA-256 files; creates an annotated tag;
-and publishes the GitHub Release.
+and publishes the GitHub Release. The runtime job executes the arm64 archive
+produced by that same workflow, so publishing cannot proceed if the release
+artifact does not run in the pinned OpenHarmony 7.0 mini rootfs.
+
+The OpenHarmony-specific scripts and their limitations are documented in
+[`build/openharmony/README.md`](openharmony/README.md). DockerHarmony provides
+OpenHarmony userland over a Linux kernel; it is not a substitute for tests
+that require device services, graphics, or hardware drivers.
 
 Ordinary pull requests do not change `.github/release.json` and therefore do
 not publish releases. The workflow can be restarted with `workflow_dispatch`

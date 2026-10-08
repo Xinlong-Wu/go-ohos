@@ -31,3 +31,8 @@ go test cmd/go -run '^TestDocsUpToDate$'
 CGO_ENABLED=0 go tool dist test -compile-only
 CGO_ENABLED=1 go tool dist test -compile-only
 CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go tool dist test -compile-only
+
+# Keep the OpenHarmony target compile checks in the release gate. These checks
+# produce target objects but intentionally do not execute them; the latter is
+# covered by the DockerHarmony arm64 job in the release workflow.
+bash "$repo_root/build/openharmony/compile.sh" --goroot "$repo_root"
