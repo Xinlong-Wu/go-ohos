@@ -12,14 +12,23 @@ changing the upstream Go version.
 
 ## Release flow
 
-1. Fetch the new stable tag from `golang/go`.
-2. Create a release branch from `origin/master`.
-3. Merge the upstream tag and resolve any OpenHarmony conflicts on that branch.
-4. Update `.github/release.json` with the upstream and OpenHarmony tags.
-5. Open a pull request targeting `master`. The release workflow validates the
-   metadata, runs the release tests, and builds both archives without
-   publishing them.
-6. Merge the pull request manually.
+The scheduled `.github/workflows/sync-upstream.yml` workflow checks for the
+latest official stable `goX.Y.Z` tag every third calendar day. When a newer
+stable release exists, it:
+
+1. Creates `sync/upstream-<upstream-tag>` from the exact upstream tag.
+2. Adds one commit that updates `.github/release.json` to
+   `<upstream-tag>-ohos.1`.
+3. Opens a pull request targeting `master` without enabling auto-merge.
+
+Resolve any OpenHarmony conflicts manually, preserve the prepared release
+metadata, and wait for the release checks. Merge with **Create a merge commit**;
+squash and rebase merges discard the upstream-tag ancestry required by the
+release gate.
+
+For a manual fallback, prepare the same two-parent history and manifest change
+on a dedicated release branch, then open an equivalent pull request into
+`master`.
 
 Changing `.github/release.json` on `master` starts the release workflow. The
 workflow verifies that the upstream tag exists, is an ancestor of the merged
