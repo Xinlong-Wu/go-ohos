@@ -1,0 +1,221 @@
+name: Sync upstream development branch
+
+on:
+  # GitHub cron uses UTC and calendar days. This runs on every third day of
+  # each month; workflow_dispatch can be used for an immediate sync.
+  schedule:
+    - cron: '17 3 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-upstream-master
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPOSITORY: golang/go
+  UPSTREAM_BRANCH: master
+  TARGET_BRANCH: master
+  SYNC_BRANCH_PREFIX: sync/upstream
+
+jobs:
+  sync:
+    name: Create upstream sync pull request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out downstream target branch
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+
+      - name: Fetch upstream and publish the dated sync branch
+        id: sync
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+
+          sync_date="$(date -u +%F)"
+          sync_branch="${SYNC_BRANCH_PREFIX}-${sync_date}"
+          remote_ref="refs/heads/${sync_branch}"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          git fetch --no-tags origin \
+            "+refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
+          git fetch --no-tags "https://github.com/${UPSTREAM_REPOSITORY}.git" \
+            "+refs/heads/${UPSTREAM_BRANCH}:refs/remotes/upstream/${UPSTREAM_BRANCH}"
+
+          target_sha="$(git rev-parse "refs/remotes/origin/${TARGET_BRANCH}")"
+          upstream_sha="$(git rev-parse "refs/remotes/upstream/${UPSTREAM_BRANCH}")"
+
+          {
+            printf 'sync_date=%s\n' "$sync_date"
+            printf 'sync_branch=%s\n' "$sync_branch"
+            printf 'target_sha=%s\n' "$target_sha"
+            printf 'upstream_sha=%s\n' "$upstream_sha"
+          } >>"$GITHUB_OUTPUT"
+
+          if git merge-base --is-ancestor "$upstream_sha" "$target_sha"; then
+            echo 'changed=false' >>"$GITHUB_OUTPUT"
+            {
+              echo '### Upstream sync skipped'
+              echo
+              printf -- '- Upstream %s/%s at `%s` is already contained in `%s`.\n' \
+                "$UPSTREAM_REPOSITORY" "$UPSTREAM_BRANCH" "$upstream_sha" "$TARGET_BRANCH"
+            } >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Avoid opening the same snapshot repeatedly when an earlier dated
+          # PR already points at this exact upstream commit.
+          matching_pr="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base "$TARGET_BRANCH" \
+            --state all \
+            --limit 100 \
+            --json state,url,headRefName,headRefOid \
+            --jq ".[] | select(.headRefName | startswith(\"${SYNC_BRANCH_PREFIX}-\")) | select(.headRefOid == \"$upstream_sha\") | [.url, .state] | @tsv" \
+            | sed -n '1p')"
+          if [[ -n "$matching_pr" ]]; then
+            echo 'changed=false' >>"$GITHUB_OUTPUT"
+            IFS=$'\t' read -r matching_url matching_state <<<"$matching_pr"
+            {
+              echo '### Upstream sync skipped'
+              echo
+              printf -- '- Upstream commit: `%s`\n' "$upstream_sha"
+              printf -- '- Existing PR: %s (%s)\n' "$matching_url" "$matching_state"
+            } >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # A manually closed or already merged same-day PR is a deliberate
+          # user decision. Do not overwrite its branch or reopen it.
+          same_branch_pr="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base "$TARGET_BRANCH" \
+            --head "$sync_branch" \
+            --state all \
+            --limit 1 \
+            --json state,url \
+            --jq '(.[0] // empty) | [.state, .url] | @tsv')"
+          if [[ -n "$same_branch_pr" ]]; then
+            IFS=$'\t' read -r same_branch_state same_branch_url <<<"$same_branch_pr"
+            if [[ "$same_branch_state" != "OPEN" ]]; then
+              echo 'changed=false' >>"$GITHUB_OUTPUT"
+              {
+                echo '### Upstream sync skipped'
+                echo
+                printf -- '- The dated branch already has a %s PR: %s\n' \
+                  "$same_branch_state" "$same_branch_url"
+                echo '- The workflow will not reopen it or overwrite the branch.'
+              } >>"$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          fi
+
+          remote_sha="$(git ls-remote --heads origin "$remote_ref" | awk 'NR == 1 {print $1}')"
+          if [[ -n "$remote_sha" ]]; then
+            git fetch --no-tags origin \
+              "+${remote_ref}:refs/remotes/origin/${sync_branch}"
+            if ! git merge-base --is-ancestor "$remote_sha" "$upstream_sha"; then
+              {
+                echo '### Upstream sync stopped'
+                echo
+                printf -- '- Remote branch `%s` contains commits outside the current upstream history.\n' \
+                  "$sync_branch"
+                echo '- Refusing to overwrite possible manual conflict-resolution work.'
+                printf -- '- Run: %s\n' "$run_url"
+              } >>"$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            git push \
+              --force-with-lease="${remote_ref}:${remote_sha}" \
+              origin "${upstream_sha}:${remote_ref}"
+          else
+            git push origin "${upstream_sha}:${remote_ref}"
+          fi
+
+          echo 'changed=true' >>"$GITHUB_OUTPUT"
+          {
+            echo '### Upstream sync branch published'
+            echo
+            printf -- '- Branch: `%s`\n' "$sync_branch"
+            printf -- '- Downstream base: `%s` at `%s`\n' "$TARGET_BRANCH" "$target_sha"
+            printf -- '- Upstream source: `%s/%s` at `%s`\n' \
+              "$UPSTREAM_REPOSITORY" "$UPSTREAM_BRANCH" "$upstream_sha"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Create or update the pull request
+        if: steps.sync.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+          SYNC_DATE: ${{ steps.sync.outputs.sync_date }}
+          SYNC_BRANCH: ${{ steps.sync.outputs.sync_branch }}
+          TARGET_SHA: ${{ steps.sync.outputs.target_sha }}
+          UPSTREAM_SHA: ${{ steps.sync.outputs.upstream_sha }}
+        run: |
+          set -euo pipefail
+
+          title="sync: update from ${UPSTREAM_REPOSITORY} ${UPSTREAM_BRANCH} (${SYNC_DATE})"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body_file="$RUNNER_TEMP/upstream-sync-pr.md"
+          {
+            echo 'This pull request was created by the scheduled upstream-sync workflow.'
+            echo
+            printf -- '- Upstream: https://github.com/%s/tree/%s\n' \
+              "$UPSTREAM_REPOSITORY" "$UPSTREAM_SHA"
+            printf -- '- Upstream branch: `%s`\n' "$UPSTREAM_BRANCH"
+            printf -- '- Downstream base: `%s` at `%s`\n' "$TARGET_BRANCH" "$TARGET_SHA"
+            printf -- '- Sync branch: `%s`\n' "$SYNC_BRANCH"
+            printf -- '- Workflow run: %s\n' "$run_url"
+            echo
+            echo 'The sync branch mirrors the upstream commit directly. The downstream'
+            echo 'OpenHarmony changes remain on the base branch and GitHub will combine'
+            echo 'both histories when this PR is merged. Any conflicts must be reviewed'
+            echo 'and resolved manually.'
+            echo
+            echo 'Auto-merge is intentionally not enabled.'
+          } >"$body_file"
+
+          existing_number="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base "$TARGET_BRANCH" \
+            --head "$SYNC_BRANCH" \
+            --state open \
+            --limit 1 \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [[ -n "$existing_number" ]]; then
+            gh pr edit "$existing_number" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body-file "$body_file"
+            pr_url="$(gh pr view "$existing_number" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json url \
+              --jq '.url')"
+          else
+            pr_url="$(gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base "$TARGET_BRANCH" \
+              --head "$SYNC_BRANCH" \
+              --title "$title" \
+              --body-file "$body_file")"
+          fi
+
+          {
+            echo
+            echo '### Pull request'
+            echo
+            printf -- '- %s\n' "$pr_url"
+            echo '- Auto-merge: disabled'
+          } >>"$GITHUB_STEP_SUMMARY"
