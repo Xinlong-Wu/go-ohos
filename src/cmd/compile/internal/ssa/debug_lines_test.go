@@ -53,7 +53,7 @@ func hasRegisterABI() bool {
 
 func unixOnly(t *testing.T) {
 	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" { // in particular, it could be windows.
-		t.Skip("this test depends on creating a file with a wonky name, only works for sure on Linux and Darwin")
+		t.Skip("this test depends on creating a file with a wonky name, only works for sure on Linux, openharmony and Darwin")
 	}
 }
 

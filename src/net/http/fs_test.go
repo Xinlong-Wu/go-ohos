@@ -1324,7 +1324,7 @@ func TestLinuxSendfile(t *testing.T) {
 	setParallel(t)
 	defer afterTest(t)
 	if runtime.GOOS != "linux" {
-		t.Skip("skipping; linux-only test")
+		t.Skipf("skipping; not supported on %v", runtime.GOOS)
 	}
 	if _, err := exec.LookPath("strace"); err != nil {
 		t.Skip("skipping; strace not found in path")

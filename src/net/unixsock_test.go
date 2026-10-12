@@ -283,7 +283,7 @@ func TestUnixConnLocalAndRemoteNames(t *testing.T) {
 		}
 
 		switch runtime.GOOS {
-		case "android", "linux", "windows":
+		case "android", "linux", "windows", "openharmony":
 			if laddr == "" {
 				laddr = "@" // autobind feature
 			}

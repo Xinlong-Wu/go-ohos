@@ -171,7 +171,7 @@ func TestLoopVarHashes(t *testing.T) {
 	switch runtime.GOOS {
 	case "linux", "darwin":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":
@@ -232,7 +232,7 @@ func TestLoopVarVersionEnableFlag(t *testing.T) {
 	switch runtime.GOOS {
 	case "linux", "darwin":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":
@@ -271,7 +271,7 @@ func TestLoopVarVersionEnableGoBuild(t *testing.T) {
 	switch runtime.GOOS {
 	case "linux", "darwin":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":
@@ -310,7 +310,7 @@ func TestLoopVarVersionDisableFlag(t *testing.T) {
 	switch runtime.GOOS {
 	case "linux", "darwin":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":
@@ -349,7 +349,7 @@ func TestLoopVarVersionDisableGoBuild(t *testing.T) {
 	switch runtime.GOOS {
 	case "linux", "darwin":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":

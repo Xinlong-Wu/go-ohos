@@ -166,6 +166,20 @@ void x_cgo_call_symbolizer_function(struct cgoSymbolizerArg* arg) {
 	_cgo_tsan_release();
 }
 
+int
+x_cgo_sys_lib_args_valid()
+{
+	// The ELF gABI doesn't require an argc / argv to be passed to the functions
+	// in the DT_INIT_ARRAY. However, glibc always does.
+
+	// Ignore uClibc masquerading as glibc.
+#if defined(__GLIBC__) && !defined(__UCLIBC__)
+	return 1;
+#else
+	return 0;
+#endif
+}
+
 static void
 pthread_key_destructor(void* g) {
 	if (x_crosscall2_ptr != NULL) {

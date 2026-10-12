@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if (($# < 1)); then
+  echo "usage: go_openharmony_arm64_exec PROGRAM [ARG ...]" >&2
+  exit 2
+fi
+
+program="$(realpath "$1")"
+shift
+if [[ ! -f "$program" ]]; then
+  echo "OpenHarmony test program does not exist: $program" >&2
+  exit 2
+fi
+
+image_ref="${OPENHARMONY_DOCKER_IMAGE:-ghcr.io/hqzing/dockerharmony:7.0@sha256:2befba873913622f3395ff35d9f135e44efc4c33b0969f671d707e17339b1ecb}"
+goroot="${OPENHARMONY_GOROOT:-}"
+timeout_seconds="${OPENHARMONY_DOCKER_TIMEOUT_SECONDS:-300}"
+container_program="/tmp/openharmony-test-$(basename "$program")"
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "docker is required to execute an OpenHarmony test binary." >&2
+  exit 2
+fi
+if ! docker image inspect "$image_ref" >/dev/null 2>&1; then
+  echo "DockerHarmony image is not present: $image_ref" >&2
+  echo "Run the runtime test entrypoint first so it can pull and validate the image." >&2
+  exit 2
+fi
+
+mounts=(--mount "type=bind,src=$program,dst=$container_program,readonly")
+container_workdir=/tmp
+env_args=(
+  --env GOOS=openharmony
+  --env GOARCH=arm64
+  --env HOME=/tmp
+  --env TMPDIR=/tmp
+  --env GOCACHE=/tmp/go-build
+  --env GOTMPDIR=/tmp/go-tmp
+)
+if [[ -n "$goroot" ]]; then
+  goroot="$(cd "$goroot" && pwd)"
+  mounts+=(--mount "type=bind,src=$goroot,dst=/opt/go,readonly")
+  env_args+=(--env GOROOT=/opt/go --env PATH=/opt/go/bin:/usr/bin:/bin)
+  host_workdir="$(pwd)"
+  if [[ "$host_workdir" == "$goroot" || "$host_workdir" == "$goroot"/* ]]; then
+    container_workdir="/opt/go${host_workdir#"$goroot"}"
+  fi
+fi
+if [[ -n "${OPENHARMONY_EXPECTED_GO_VERSION:-}" ]]; then
+  env_args+=(--env "OPENHARMONY_EXPECTED_GO_VERSION=$OPENHARMONY_EXPECTED_GO_VERSION")
+fi
+
+exec timeout --signal=TERM --kill-after=15s "${timeout_seconds}s" \
+  docker run --rm --platform linux/arm64 \
+    --network none \
+    --read-only \
+    --tmpfs /tmp:rw,exec,nosuid,nodev \
+    --security-opt no-new-privileges \
+    --cap-drop=ALL \
+    "${mounts[@]}" \
+    "${env_args[@]}" \
+    --workdir "$container_workdir" \
+    "$image_ref" "$container_program" "$@"

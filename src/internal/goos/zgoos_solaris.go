@@ -24,3 +24,4 @@ const IsSolaris = 1
 const IsWasip1 = 0
 const IsWindows = 0
 const IsZos = 0
+const IsOpenharmony = 0

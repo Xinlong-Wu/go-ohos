@@ -20,7 +20,7 @@ func TestFmaHash(t *testing.T) {
 	switch runtime.GOOS {
 	case "linux", "darwin":
 	default:
-		t.Skipf("Slow test, usually avoid it, os=%s not linux or darwin", runtime.GOOS)
+		t.Skipf("Slow test, usually avoid it, os=%s not linux, openharmony or darwin", runtime.GOOS)
 	}
 	switch runtime.GOARCH {
 	case "amd64", "arm64":

@@ -63,7 +63,7 @@ func (h *HeadType) Set(s string) error {
 		*h = Hfreebsd
 	case "js":
 		*h = Hjs
-	case "linux", "android":
+	case "linux", "android", "openharmony":
 		*h = Hlinux
 	case "netbsd":
 		*h = Hnetbsd

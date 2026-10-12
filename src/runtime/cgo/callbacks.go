@@ -47,6 +47,15 @@ func _cgo_panic(a *struct{ cstr *byte }) {
 	_runtime_cgo_panic_internal(a.cstr)
 }
 
+// Determines if the argc / argv passed to the library initialization functions
+// are valid.
+
+//go:cgo_import_static x_cgo_sys_lib_args_valid
+//go:linkname x_cgo_sys_lib_args_valid x_cgo_sys_lib_args_valid
+//go:linkname _cgo_sys_lib_args_valid _cgo_sys_lib_args_valid
+var x_cgo_sys_lib_args_valid byte
+var _cgo_sys_lib_args_valid = &x_cgo_sys_lib_args_valid
+
 // Indicates whether a dummy thread key has been created or not.
 //
 // When calling go exported function from C, we register a destructor

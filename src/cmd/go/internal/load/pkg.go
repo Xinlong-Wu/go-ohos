@@ -1868,7 +1868,11 @@ func (p *Package) load(ld *modload.Loader, ctx context.Context, opts PackageOpts
 		}
 		elem := p.DefaultExecName() + cfg.ExeSuffix
 		full := filepath.Join(cfg.BuildContext.GOOS+"_"+cfg.BuildContext.GOARCH, elem)
-		if cfg.BuildContext.GOOS != runtime.GOOS || cfg.BuildContext.GOARCH != runtime.GOARCH {
+		gohostos := runtime.GOOS
+		if runtime.IsOpenharmony {
+			gohostos = "openharmony"
+		}
+		if cfg.BuildContext.GOOS != gohostos || cfg.BuildContext.GOARCH != runtime.GOARCH {
 			// Install cross-compiled binaries to subdirectories of bin.
 			elem = full
 		}

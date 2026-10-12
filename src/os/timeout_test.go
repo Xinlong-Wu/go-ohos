@@ -20,7 +20,7 @@ import (
 func TestNonpollableDeadline(t *testing.T) {
 	// On BSD systems regular files seem to be pollable,
 	// so just run this test on Linux and Windows.
-	if runtime.GOOS != "linux" && runtime.GOOS != "windows" {
+	if runtime.GOOS != "linux" && runtime.GOOS != "windows" && runtime.GOOS != "openharmony"{
 		t.Skipf("skipping on %s", runtime.GOOS)
 	}
 	t.Parallel()

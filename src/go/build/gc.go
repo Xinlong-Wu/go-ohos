@@ -13,5 +13,8 @@ import (
 
 // getToolDir returns the default value of ToolDir.
 func getToolDir() string {
+	if runtime.IsOpenharmony {
+		return filepath.Join(runtime.GOROOT(), "pkg/tool/openharmony_"+runtime.GOARCH)
+	}
 	return filepath.Join(runtime.GOROOT(), "pkg/tool/"+runtime.GOOS+"_"+runtime.GOARCH)
 }

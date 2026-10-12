@@ -19,15 +19,21 @@ TEXT runtime·load_g(SB),NOSPLIT,$0
 #endif
 
 	MRS_TPIDR_R0
-#ifdef TLS_darwin
-	// Darwin sometimes returns unaligned pointers
-	AND	$0xfffffffffffffff8, R0
-#endif
+#ifdef GOOS_darwin
+	// Darwin (macOS) 逻辑：必须保持原样
+	AND $0xfffffffffffffff8, R0
 	MOVD	runtime·tls_g(SB), R27
 	MOVD	(R0)(R27), g
+#else
+    // Musl/Linux TLS GD 逻辑
+    MOVD R0, R27
+	MOVD runtime·tls_g(SB), R1
+	CALL (R1)
+	MOVD (R27)(R0), g
+#endif
 
 nocgo:
-	RET
+    RET
 
 TEXT runtime·save_g(SB),NOSPLIT,$0
 #ifndef GOOS_darwin
@@ -39,16 +45,22 @@ TEXT runtime·save_g(SB),NOSPLIT,$0
 #endif
 #endif
 
-	MRS_TPIDR_R0
-#ifdef TLS_darwin
-	// Darwin sometimes returns unaligned pointers
-	AND	$0xfffffffffffffff8, R0
-#endif
+    MRS_TPIDR_R0
+#ifdef GOOS_darwin
+    // Darwin (macOS) 逻辑：防止 blr x1 跳转到 0x810
+    AND	$0xfffffffffffffff8, R0
 	MOVD	runtime·tls_g(SB), R27
 	MOVD	g, (R0)(R27)
+#else
+	// Musl/Linux TLS GD 逻辑
+	MOVD	R0, R27
+    MOVD	runtime·tls_g(SB), R1
+	CALL	(R1)
+    MOVD	g, (R27)(R0)
+#endif
 
 nocgo:
-	RET
+    RET
 
 #ifdef TLSG_IS_VARIABLE
 #ifdef GOOS_android

@@ -1,0 +1,264 @@
+name: Sync upstream stable release
+
+on:
+  # GitHub cron uses UTC and calendar days. This runs on every third day of
+  # each month; workflow_dispatch can be used for an immediate check.
+  schedule:
+    - cron: '17 3 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-upstream-stable-release
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPOSITORY: golang/go
+  TARGET_BRANCH: master
+  RELEASE_BRANCH_PREFIX: release
+
+jobs:
+  sync:
+    name: Create stable-release sync pull request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out downstream target branch
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+
+      - name: Discover the latest stable tag and publish its release branch
+        id: sync
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+
+          upstream_url="https://github.com/${UPSTREAM_REPOSITORY}.git"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          mapfile -t released_upstream_tags < <(
+            git ls-remote --refs --tags origin 'refs/tags/go*-ohos.*' |
+              sed -nE 's#.*refs/tags/(go[0-9]+\.[0-9]+\.[0-9]+)-ohos\.[1-9][0-9]*$#\1#p'
+          )
+          if (( ${#released_upstream_tags[@]} == 0 )); then
+            current_upstream_tag=go0.0.0
+            current_release_display=none
+          else
+            current_upstream_tag="$(printf '%s\n' "${released_upstream_tags[@]}" | sort -Vu | tail -n 1)"
+            current_release_display="$current_upstream_tag"
+          fi
+
+          mapfile -t stable_tags < <(
+            git ls-remote --refs --tags "$upstream_url" 'refs/tags/go*' |
+              awk '{sub("refs/tags/", "", $2); if ($2 ~ /^go[0-9]+\.[0-9]+\.[0-9]+$/) print $2}'
+          )
+          if (( ${#stable_tags[@]} == 0 )); then
+            echo "No stable Go tags were found in $UPSTREAM_REPOSITORY." >&2
+            exit 1
+          fi
+
+          latest_upstream_tag="$(printf '%s\n' "${stable_tags[@]}" | sort -V | tail -n 1)"
+          release_tag="${latest_upstream_tag}-ohos.1"
+          release_branch="${RELEASE_BRANCH_PREFIX}/${release_tag}"
+          remote_ref="refs/heads/${release_branch}"
+
+          {
+            printf 'current_upstream_tag=%s\n' "$current_release_display"
+            printf 'upstream_tag=%s\n' "$latest_upstream_tag"
+            printf 'release_tag=%s\n' "$release_tag"
+            printf 'release_branch=%s\n' "$release_branch"
+          } >>"$GITHUB_OUTPUT"
+
+          if ! python3 - "$current_upstream_tag" "$latest_upstream_tag" <<'PY'
+          import re
+          import sys
+
+          def version(tag: str) -> tuple[int, int, int]:
+              match = re.fullmatch(r"go(\d+)\.(\d+)\.(\d+)", tag)
+              if match is None:
+                  raise SystemExit(f"invalid stable Go tag: {tag}")
+              return tuple(map(int, match.groups()))
+
+          raise SystemExit(0 if version(sys.argv[2]) > version(sys.argv[1]) else 1)
+          PY
+          then
+            echo 'changed=false' >>"$GITHUB_OUTPUT"
+            {
+              echo '### Stable-release sync skipped'
+              echo
+              printf -- '- Latest downstream upstream-version tag: `%s`\n' \
+                "$current_release_display"
+              printf -- '- Latest upstream stable tag: `%s`\n' "$latest_upstream_tag"
+              echo '- There is no newer stable upstream release.'
+            } >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Never prepare two release integrations against the same base at
+          # once. A later release must be prepared after the earlier one has
+          # been manually merged into master.
+          pending_pr="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base "$TARGET_BRANCH" \
+            --state open \
+            --limit 100 \
+            --json headRefName,title,url \
+            --jq ".[] | select(.headRefName | startswith(\"${RELEASE_BRANCH_PREFIX}/go\")) | [.url, .headRefName, .title] | @tsv" \
+            | sed -n '1p')"
+          if [[ -n "$pending_pr" ]]; then
+            echo 'changed=false' >>"$GITHUB_OUTPUT"
+            IFS=$'\t' read -r pending_url pending_branch pending_title <<<"$pending_pr"
+            {
+              echo '### Stable-release sync skipped'
+              echo
+              printf -- '- Pending release PR: %s\n' "$pending_url"
+              printf -- '- Branch: `%s`\n' "$pending_branch"
+              printf -- '- Title: %s\n' "$pending_title"
+              echo '- Merge or close that PR before preparing another release.'
+            } >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          existing_pr="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base "$TARGET_BRANCH" \
+            --head "$release_branch" \
+            --state all \
+            --limit 1 \
+            --json state,url \
+            --jq '(.[0] // empty) | [.state, .url] | @tsv')"
+          if [[ -n "$existing_pr" ]]; then
+            echo 'changed=false' >>"$GITHUB_OUTPUT"
+            IFS=$'\t' read -r existing_state existing_url <<<"$existing_pr"
+            {
+              echo '### Stable-release sync skipped'
+              echo
+              printf -- '- The release branch already has a %s PR: %s\n' \
+                "$existing_state" "$existing_url"
+              echo '- The workflow will not reopen it or overwrite the branch.'
+            } >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$release_tag" >/dev/null 2>&1; then
+            echo 'changed=false' >>"$GITHUB_OUTPUT"
+            {
+              echo '### Stable-release sync skipped'
+              echo
+              printf -- '- OpenHarmony release tag `%s` already exists.\n' "$release_tag"
+            } >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git fetch --no-tags origin \
+            "+refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
+          target_sha="$(git rev-parse "refs/remotes/origin/${TARGET_BRANCH}")"
+          upstream_ref="refs/upstream-sync/tags/${latest_upstream_tag}"
+          git fetch --no-tags "$upstream_url" \
+            "+refs/tags/${latest_upstream_tag}:${upstream_ref}"
+          upstream_sha="$(git rev-parse "${upstream_ref}^{commit}")"
+          upstream_version="$(git show "${upstream_sha}:VERSION" | sed -n '1p')"
+          if [[ "$upstream_version" != "$latest_upstream_tag" ]]; then
+            echo "VERSION at $latest_upstream_tag contains $upstream_version." >&2
+            exit 1
+          fi
+
+          {
+            printf 'target_sha=%s\n' "$target_sha"
+            printf 'upstream_sha=%s\n' "$upstream_sha"
+          } >>"$GITHUB_OUTPUT"
+
+          remote_sha="$(git ls-remote --heads origin "$remote_ref" | awk 'NR == 1 {print $1}')"
+          if [[ -n "$remote_sha" ]]; then
+            # Recover from a previous run that pushed the exact upstream tag
+            # but failed before opening its PR. Any different commit may be
+            # manual conflict-resolution work and must remain untouched.
+            if [[ "$remote_sha" != "$upstream_sha" ]]; then
+              {
+                echo '### Stable-release sync stopped'
+                echo
+                printf -- '- Remote branch `%s` no longer points to the upstream tag.\n' \
+                  "$release_branch"
+                echo '- Refusing to overwrite possible manual conflict-resolution work.'
+                printf -- '- Run: %s\n' "$run_url"
+              } >>"$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+          else
+            git push origin "${upstream_sha}:${remote_ref}"
+          fi
+
+          echo 'changed=true' >>"$GITHUB_OUTPUT"
+          {
+            echo '### Stable-release branch published'
+            echo
+            printf -- '- Upstream stable tag: `%s` at `%s`\n' \
+              "$latest_upstream_tag" "$upstream_sha"
+            printf -- '- OpenHarmony release tag: `%s`\n' "$release_tag"
+            printf -- '- Downstream base: `%s` at `%s`\n' "$TARGET_BRANCH" "$target_sha"
+            printf -- '- Release branch: `%s`\n' "$release_branch"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Create the release synchronization pull request
+        if: steps.sync.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+          CURRENT_UPSTREAM_TAG: ${{ steps.sync.outputs.current_upstream_tag }}
+          UPSTREAM_TAG: ${{ steps.sync.outputs.upstream_tag }}
+          RELEASE_TAG: ${{ steps.sync.outputs.release_tag }}
+          RELEASE_BRANCH: ${{ steps.sync.outputs.release_branch }}
+          TARGET_SHA: ${{ steps.sync.outputs.target_sha }}
+          UPSTREAM_SHA: ${{ steps.sync.outputs.upstream_sha }}
+        run: |
+          set -euo pipefail
+
+          title="release: sync ${UPSTREAM_TAG} for OpenHarmony"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body_file="$RUNNER_TEMP/upstream-release-pr.md"
+          {
+            echo 'This pull request was created by the scheduled stable-release sync workflow.'
+            echo
+            printf -- '- Previous upstream release: `%s`\n' "$CURRENT_UPSTREAM_TAG"
+            printf -- '- Upstream stable tag: [%s](https://github.com/%s/tree/%s) at `%s`\n' \
+              "$UPSTREAM_TAG" "$UPSTREAM_REPOSITORY" "$UPSTREAM_TAG" "$UPSTREAM_SHA"
+            printf -- '- OpenHarmony release tag: `%s`\n' "$RELEASE_TAG"
+            printf -- '- Downstream base: `%s` at `%s`\n' "$TARGET_BRANCH" "$TARGET_SHA"
+            printf -- '- Release branch: `%s`\n' "$RELEASE_BRANCH"
+            printf -- '- Workflow run: %s\n' "$run_url"
+            echo
+            echo 'The release branch points directly at the exact upstream stable tag.'
+            echo 'Preserve the downstream OpenHarmony changes while resolving conflicts.'
+            echo 'The release workflow derives all version metadata from this branch name.'
+            echo
+            echo 'After checks pass, merge this PR manually with **Create a merge commit**.'
+            echo 'Do not squash or rebase: the release gate verifies that the upstream tag'
+            echo 'is an ancestor of the merged source commit. The merged-PR event then'
+            echo 'automatically tests, builds, tags, and publishes the GitHub Release.'
+            echo
+            echo 'Auto-merge is intentionally not enabled.'
+          } >"$body_file"
+
+          pr_url="$(gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base "$TARGET_BRANCH" \
+            --head "$RELEASE_BRANCH" \
+            --title "$title" \
+            --body-file "$body_file")"
+
+          {
+            echo
+            echo '### Pull request'
+            echo
+            printf -- '- %s\n' "$pr_url"
+            echo '- Required merge method: merge commit'
+            echo '- Auto-merge: disabled'
+          } >>"$GITHUB_STEP_SUMMARY"

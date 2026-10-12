@@ -54,6 +54,9 @@ type Shlib struct {
 	// address relocation with no addend. These were R_ADDR
 	// relocations when the shared library was built.
 	relocTarget map[uint64]string
+	// Only used for get r_addend in decodetypeGcprogShlibByReloc.
+	// key is r_offset, value is r_addend.
+	addendMap map[uint64]int64
 }
 
 // A relocation that applies to part of the shared library.

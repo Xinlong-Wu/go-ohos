@@ -1274,7 +1274,7 @@ func main() {
 func TestIssue42396(t *testing.T) {
 	testenv.MustHaveGoBuild(t)
 
-	if !platform.RaceDetectorSupported(runtime.GOOS, runtime.GOARCH) {
+	if !platform.RaceDetectorSupported(runtime.GOOS, runtime.GOARCH) || runtime.IsOpenharmony {
 		t.Skip("no race detector support")
 	}
 

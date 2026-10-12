@@ -160,7 +160,7 @@ func testMain(m *testing.M) int {
 			if GOARCH == "arm64" {
 				libbase += "_shared"
 			}
-		case "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "solaris", "illumos":
+		case "dragonfly", "freebsd", "linux", "netbsd", "openbsd", "openharmony", "solaris", "illumos":
 			libbase += "_shared"
 		}
 	}

@@ -414,6 +414,10 @@ func readNotes(f *elf.File) ([]*note, error) {
 		if sect.Type != elf.SHT_NOTE {
 			continue
 		}
+		if sect.Name == ".note.ohos.ident" {
+			continue // If the field is .note.ohos.ident, skip the field and do not parse it.
+		}
+
 		r := sect.Open()
 		for {
 			var namesize, descsize, tag int32
