@@ -4,9 +4,9 @@ OpenHarmony releases follow stable tags from the upstream
 [`golang/go`](https://github.com/golang/go) repository. The upstream source tag
 and the OpenHarmony distribution tag are deliberately different:
 
-- Upstream source tag: `go1.27.1`
-- OpenHarmony release tag: `go1.27.1-ohos.1`
-- Release branch: `release/go1.27.1-ohos.1`
+- Upstream source tag: `goX.Y.Z` (for example, `go1.27.2`)
+- OpenHarmony release tag: `goX.Y.Z-ohos.N`
+- Release branch: `release/goX.Y.Z-ohos.N`
 
 The suffix is incremented for an OpenHarmony-only rebuild or fix that keeps the
 same upstream Go version.
