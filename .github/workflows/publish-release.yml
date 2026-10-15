@@ -174,15 +174,28 @@ jobs:
         run: bash build/release/test.sh
 
   build:
+    name: build (${{ matrix.os }}/${{ matrix.arch }})
     needs: prepare
     strategy:
       fail-fast: false
       matrix:
         include:
           - runner: ubuntu-24.04
+            os: linux
             arch: amd64
+            artifact: release-amd64
           - runner: ubuntu-24.04-arm
+            os: linux
             arch: arm64
+            artifact: release-arm64
+          - runner: macos-15-intel
+            os: darwin
+            arch: amd64
+            artifact: release-darwin-amd64
+          - runner: macos-15
+            os: darwin
+            arch: arm64
+            artifact: release-darwin-arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
@@ -199,9 +212,20 @@ jobs:
           check-latest: true
           cache: false
 
+      - name: Install GNU tar on macOS
+        if: matrix.os == 'darwin'
+        shell: bash
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          if ! command -v gtar >/dev/null 2>&1; then
+            brew install gnu-tar
+          fi
+
       - name: Build release archive
         shell: bash
         env:
+          EXPECTED_OS: ${{ matrix.os }}
           EXPECTED_ARCH: ${{ matrix.arch }}
           SOURCE_DATE_EPOCH: ${{ needs.prepare.outputs.source_date_epoch }}
         run: |
@@ -212,7 +236,7 @@ jobs:
       - name: Upload release archive
         uses: actions/upload-artifact@v7
         with:
-          name: release-${{ matrix.arch }}
+          name: ${{ matrix.artifact }}
           path: ${{ runner.temp }}/release-assets/*
           if-no-files-found: error
           retention-days: 7
@@ -389,18 +413,33 @@ jobs:
 
       - name: Verify release archives
         shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
         run: |
           set -euo pipefail
           shopt -s nullglob
+          archives=(dist/*.tar.gz)
           checksums=(dist/*.sha256)
-          if (( ${#checksums[@]} != 2 )); then
-            echo "Expected two checksum files, found ${#checksums[@]}." >&2
+          if (( ${#archives[@]} != 4 || ${#checksums[@]} != 4 )); then
+            echo "Expected four archives and four checksum files." >&2
+            echo "Found ${#archives[@]} archives and ${#checksums[@]} checksum files." >&2
             exit 1
           fi
-          for checksum in "${checksums[@]}"; do
+
+          expected_archives=(
+            "$RELEASE_TAG-amd64.tar.gz"
+            "$RELEASE_TAG-arm64.tar.gz"
+            "$RELEASE_TAG-darwin-amd64.tar.gz"
+            "$RELEASE_TAG-darwin-arm64.tar.gz"
+          )
+          for archive in "${expected_archives[@]}"; do
+            if [[ ! -f "dist/$archive" || ! -f "dist/$archive.sha256" ]]; then
+              echo "Missing release archive or checksum: $archive" >&2
+              exit 1
+            fi
             (
               cd dist
-              sha256sum -c "$(basename "$checksum")"
+              sha256sum -c "$archive.sha256"
             )
           done
 
@@ -444,7 +483,8 @@ jobs:
           - OpenHarmony source commit: https://github.com/$GITHUB_REPOSITORY/commit/$SOURCE_COMMIT
           - OpenHarmony revision: ohos.$OHOS_REVISION
           - Validation: short standard-library tests, targeted toolchain tests,
-            OpenHarmony compile/runtime checks, and amd64/arm64 release builds
+            OpenHarmony compile/runtime checks, Linux amd64/arm64 release builds,
+            and macOS amd64/arm64 release builds
 
           This release was published automatically after its release PR was
           manually merged into the master branch.

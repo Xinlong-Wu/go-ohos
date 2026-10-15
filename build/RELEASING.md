@@ -41,8 +41,8 @@ ancestry required by the release gate.
 `.github/workflows/publish-release.yml` handles two phases:
 
 1. For an open release PR, it validates the branch-derived version, tests the
-   synthetic merge result, and builds amd64 and arm64 archives without
-   publishing them.
+   synthetic merge result, and builds native Linux and macOS archives for both
+   amd64 and arm64 without publishing them.
 2. When that PR is manually merged, its `pull_request.closed` event supplies
    the actual merge commit. The workflow verifies that it is a two-parent
    merge commit contained in `master`, repeats all tests and builds, creates
@@ -53,6 +53,11 @@ tests, OpenHarmony cross-compilation checks, and DockerHarmony OpenHarmony
 userland runtime checks. The runtime job executes the arm64 archive produced by
 the same workflow, so publishing cannot proceed if that toolchain does not run
 inside the pinned OpenHarmony 7.0 mini rootfs.
+
+Every published archive has a matching `.sha256` file. Linux keeps the existing
+asset names `<release-tag>-amd64.tar.gz` and `<release-tag>-arm64.tar.gz`.
+macOS uses `<release-tag>-darwin-amd64.tar.gz` for Intel Macs and
+`<release-tag>-darwin-arm64.tar.gz` for Apple Silicon Macs.
 
 The OpenHarmony-specific scripts and their limitations are documented in
 [`build/openharmony/README.md`](openharmony/README.md). DockerHarmony provides
