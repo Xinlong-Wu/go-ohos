@@ -17,14 +17,18 @@ if ! command -v go >/dev/null 2>&1; then
   exit 2
 fi
 
-go env
-go version
-
-(
-  cd "$repo_root/src"
-  umask 0022
-  bash ./make.bash -v
-)
+case "$(uname -s)" in
+  Linux)
+    host_os="linux"
+    ;;
+  Darwin)
+    host_os="darwin"
+    ;;
+  *)
+    echo "Unsupported host operating system: $(uname -s)" >&2
+    exit 2
+    ;;
+esac
 
 case "$(uname -m)" in
   x86_64 | amd64)
@@ -39,14 +43,59 @@ case "$(uname -m)" in
     ;;
 esac
 
+if [[ -n "${EXPECTED_OS:-}" && "$host_os" != "$EXPECTED_OS" ]]; then
+  echo "Expected host operating system $EXPECTED_OS, got $host_os." >&2
+  exit 2
+fi
+
 if [[ -n "${EXPECTED_ARCH:-}" && "$host_arch" != "$EXPECTED_ARCH" ]]; then
   echo "Expected host architecture $EXPECTED_ARCH, got $host_arch." >&2
   exit 2
 fi
 
+if tar --version 2>/dev/null | grep -q 'GNU tar'; then
+  tar_command="tar"
+elif command -v gtar >/dev/null 2>&1; then
+  tar_command="gtar"
+else
+  echo "GNU tar is required for reproducible release archives." >&2
+  exit 2
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+  checksum_create=(sha256sum)
+  checksum_verify=(sha256sum -c)
+elif command -v shasum >/dev/null 2>&1; then
+  checksum_create=(shasum -a 256)
+  checksum_verify=(shasum -a 256 -c)
+else
+  echo "sha256sum or shasum is required." >&2
+  exit 2
+fi
+
+go env
+go version
+
+(
+  cd "$repo_root/src"
+  umask 0022
+  bash ./make.bash -v
+)
+
+toolchain_os="$("$repo_root/bin/go" env GOHOSTOS)"
+toolchain_arch="$("$repo_root/bin/go" env GOHOSTARCH)"
+if [[ "$toolchain_os" != "$host_os" || "$toolchain_arch" != "$host_arch" ]]; then
+  echo "Built toolchain is $toolchain_os/$toolchain_arch, expected $host_os/$host_arch." >&2
+  exit 2
+fi
+
 mkdir -p "$output_dir"
 output_dir="$(cd "$output_dir" && pwd)"
-package_name="${release_tag}-${host_arch}.tar.gz"
+if [[ "$host_os" == linux ]]; then
+  package_name="${release_tag}-${host_arch}.tar.gz"
+else
+  package_name="${release_tag}-${host_os}-${host_arch}.tar.gz"
+fi
 output_path="$output_dir/$package_name"
 
 staging_dir="$(mktemp -d)"
@@ -60,7 +109,7 @@ trap cleanup EXIT
 package_root="$staging_dir/$release_tag"
 mkdir -p "$package_root"
 
-tar -C "$repo_root" \
+"$tar_command" -C "$repo_root" \
   --exclude='./.git' \
   --exclude='./.git/*' \
   --exclude='./.github' \
@@ -71,7 +120,7 @@ tar -C "$repo_root" \
   --exclude='./pkg/obj/*' \
   --exclude='./target' \
   --exclude='./target/*' \
-  -cf - . | tar -C "$package_root" -xf -
+  -cf - . | "$tar_command" -C "$package_root" -xf -
 
 source_date_epoch="${SOURCE_DATE_EPOCH:-$(git -C "$repo_root" show -s --format=%ct HEAD)}"
 if [[ ! "$source_date_epoch" =~ ^[0-9]+$ ]]; then
@@ -81,7 +130,7 @@ fi
 
 (
   cd "$staging_dir"
-  tar --sort=name \
+  "$tar_command" --sort=name \
     --mtime="@$source_date_epoch" \
     --owner=0 \
     --group=0 \
@@ -91,8 +140,8 @@ fi
 
 (
   cd "$output_dir"
-  sha256sum "$package_name" >"$package_name.sha256"
-  sha256sum -c "$package_name.sha256"
+  "${checksum_create[@]}" "$package_name" >"$package_name.sha256"
+  "${checksum_verify[@]}" "$package_name.sha256"
 )
 
 echo "Created release assets:"
